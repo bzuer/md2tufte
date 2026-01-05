@@ -1,0 +1,26 @@
+{
+  "name": "md2html",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "node scripts/build-css.js && astro build",
+    "preview": "astro preview --port 1213",
+    "start": "astro dev",
+    "deploy": "npm run build"
+  },
+  "dependencies": {
+    "astro": "^5.16.6",
+    "katex": "^0.16.27",
+    "rehype-katex": "^7.0.1",
+    "rehype-raw": "^7.0.0",
+    "rehype-stringify": "^10.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0"
+  }
+}

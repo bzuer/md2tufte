@@ -1,0 +1,12 @@
+---
+import { readFile } from "node:fs/promises";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { renderMarkdown } from "../lib/markdown.js";
+
+const markdown = await readFile(new URL("../../content/index.md", import.meta.url), "utf-8");
+const html = await renderMarkdown(markdown);
+---
+
+<BaseLayout title="Bruno Cruz">
+  <Fragment set:html={html} />
+</BaseLayout>

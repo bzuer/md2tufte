@@ -1,0 +1,513 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Md2tufte</title><link rel="stylesheet" href="/static/css/styles.min.css?v=93423648"><link rel="stylesheet" href="/static/_astro/index.Dy9etiGE.css"></head> <body> <a class="skip-link" href="#content">Skip to content</a> <main id="content"> <article> <section>  <h1><strong>The <em>md2tufte</em> Possibilities</strong>: a Brief and Practical Guide</h1>
+<p>This document is a comprehensive, self-contained demonstration of Markdown syntax and advanced styling techniques, showcasing how to create clear, effective, and visually sophisticated technical writing. Written entirely in Markdown with embedded HTML where necessary, it serves as both a reference and a live example.</p>
+<p>The guide emphasizes readability, logical structure, and thoughtful integration of text, code, images, and tables. It draws inspiration from Edward Tufte's principles of information design—prioritizing clarity, precision, efficiency, high data-ink ratio, and respect for the reader's intelligence—while adapting them to modern web-based Markdown rendering.</p>
+<p><label for="fig-1" class="margin-toggle">⊕</label>
+<input type="checkbox" id="fig-1" class="margin-toggle">
+<span class="marginnote">
+<img src="/static/img/tufte.png" alt="Detailed description">
+</span></p>
+<p>Edward Tufte, professor emeritus at Yale University, revolutionized data visualization and communication through works such as <em>The Visual Display of Quantitative Information</em> (1983), <em>Envisioning Information</em> (1990), and <em>Visual Explanations</em> (1997). His philosophy advocates graphical excellence, elimination of "chartjunk," seamless integration of evidence, and multifunctional elements that serve multiple purposes simultaneously.</p>
+<p>Here, we apply these ideas to Markdown documents by maintaining a focused main column for primary content, placing supplementary material in margins or full-width sections, and ensuring every visual or structural element contributes meaningfully to understanding.</p>
+<p>Key Tufte concepts appear throughout this guide: high data-ink ratio, careful layering of information, tight coupling of words and visuals, and a preference for small multiples over single, overloaded graphics.</p>
+<p>Each category below includes not just syntax, but the reason the layout supports cognition.</p>
+<h2>Document Structure: Headings</h2>
+<p><strong>Tuftean Rationale: Macro/Micro Readings</strong></p>
+<p>Headings provide a macro-structure that allows readers to understand the document's scope at a glance while navigating to specific micro-details.</p>
+<p>This hierarchical layering prevents "flatland" (the lack of depth in information presentation) and establishes a clear path for cognitive processing.</p>
+<p>In Tufte's terms, headings should function like a map legend: concise, stable, and informative. Keep the hierarchy shallow so the reader can scan without losing the narrative thread. Headings are not decoration; they are a high-level index to the evidence that follows.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md"># Heading Level 1 (H1)
+## Heading Level 2 (H2)
+### Heading Level 3 (H3)
+#### Heading Level 4 (H4)
+
+</code></pre>
+<p><strong>Rendered Example</strong></p>
+<h1>Heading Level 1 (H1)</h1>
+<h2>Heading Level 2 (H2)</h2>
+<h3>Heading Level 3 (H3)</h3>
+<h4>Heading Level 4 (H4)</h4>
+<p>Limit depth to H1–H4 to avoid excessive nesting, which introduces unnecessary visual complexity.</p>
+<h2>Text Formatting: Paragraphs, Breaks, and Emphasis</h2>
+<p><strong>Tuftean Rationale: Minimalist Elegance and Signal-to-Noise Ratio</strong></p>
+<p>Tufte advocates for using the minimum amount of formatting necessary to convey meaning. Paragraph breaks provide structural "white space," which functions as a silent separator.</p>
+<p>Bold and italic tools must be used strictly for "signal" enhancement; over-formatting creates visual noise that competes with the data.</p>
+<p>Treat the paragraph as the primary unit of reasoning. Each paragraph should make one claim or advance one step, with emphasis used to clarify, not to decorate. If everything is emphasized, nothing is.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">This paragraph contains *italic*, **bold**, and ***bold italic*** text.
+
+Another paragraph follows.
+
+Line with hard break.  
+Next line after two spaces.
+
+</code></pre>
+<p><strong>Rendered Example</strong></p>
+<p>This paragraph contains <em>italic</em>, <strong>bold</strong>, and <em><strong>bold italic</strong></em> text.</p>
+<p>Another paragraph follows.</p>
+<p>Line with hard break.  
+Next line after two spaces.</p>
+<p>Use emphasis purposefully: bold for strong claims, italics for terms or nuance. Overuse diminishes impact and creates visual noise.</p>
+<h2>Lists: Unordered, Ordered, and Nested</h2>
+<p><strong>Tuftean Rationale: Parallelism and Comparison</strong></p>
+<p>Lists facilitate the comparison of discrete items within a single visual field. By organizing data into parallel structures, the reader can more easily identify patterns and relationships between variables, which is a core tenet of Tufte's analytical design.</p>
+<p>Use lists when the reader benefits from scanning and comparing items side by side. Avoid long, decorative lists; in Tufte's view, each item should earn its place by adding evidence or a distinct concept.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">- Unordered item
+- Another item
+  - Nested level
+    - Deeper level (use sparingly)
+
+1. Ordered step
+2. Next step
+   1. Sub-step
+   2. Another sub-step
+
+</code></pre>
+<p><strong>Rendered Example</strong></p>
+<ul>
+<li>Unordered item</li>
+<li>Another item
+  - Nested level
+    - Deeper level (use sparingly)</li>
+</ul>
+<ol>
+<li>Ordered step</li>
+<li>Next step
+   1. Sub-step
+   2. Another sub-step</li>
+</ol>
+<p>Keep nesting shallow to preserve clarity and maintain high informational density.</p>
+<h2>Links and Images</h2>
+<p><strong>Tuftean Rationale: Integration of Visual Evidence</strong></p>
+<p>Evidence should be placed exactly where it is needed.</p>
+<p>Tufte argues that text and graphics should be "seamlessly integrated" so the eye does not have to jump across pages to find the relevant illustration.</p>
+<p>Links serve as "micro-pathways" to deeper evidence without cluttering the primary narrative.</p>
+<p>Images should carry information, not mood. A link is an invitation to verify or extend the claim. When you can, connect the claim directly to its evidence in the same visual neighborhood.</p>
+<p><strong>Links</strong></p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">[Display text](https://example.com)
+
+</code></pre>
+<p><strong>Example</strong></p>
+<p><a href="https://ppgas.mn.ufrj.br">PPGAS</a></p>
+<p><strong>Images</strong></p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">![Alt text](/static/img/imga.png)
+
+</code></pre>
+<p>Images should provide substantive visual evidence, not decoration. Always include meaningful alt text for accessibility.</p>
+<p>Place images adjacent to the paragraph that references them, so the reader can compare claim and evidence without scrolling.</p>
+<p><strong>Rendered Example</strong></p>
+<p><img src="/static/img/imga.png" alt="Alt text"></p>
+<h2>Blockquotes</h2>
+<p><strong>Tuftean Rationale: Layering and Separation</strong></p>
+<p>Blockquotes provide a visual cue that information is being "borrowed" or emphasized from another source. This creates a secondary layer of information within the primary text, allowing for the inclusion of external authority without breaking the internal logic of the document.</p>
+<p>Use blockquotes sparingly and keep them short. Tufte prefers that quotations sit close to the argument they support, with minimal typographic drama so the evidence, not the ornament, stands out.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">> Primary quote line.
+> Continues across lines.
+>
+> - Can contain lists
+> - Or other elements
+
+</code></pre>
+<p><strong>Rendered Example</strong></p>
+<blockquote>
+<p>Primary quote line.
+Continues across lines.</p>
+<ul>
+<li>
+<p>Can contain lists</p>
+</li>
+<li>
+<p>Or other elements</p>
+</li>
+</ul>
+</blockquote>
+<p>Pair blockquotes with a nearby comment or margin note that explains why the quoted material matters.</p>
+<h2>Code: Inline and Blocks</h2>
+<p><strong>Tuftean Rationale: Precision and Technical Literacy</strong></p>
+<p>For technical documentation, code is the "raw data." Tufte emphasizes the importance of showing exact data to allow the reader to verify conclusions.</p>
+<p>Differentiating between inline commands and functional blocks maintains technical precision while preserving the flow of prose.</p>
+<p>Treat code as evidence. Keep it readable, use language tags to support syntax highlighting, and prefer small, relevant snippets over long dumps unless the full context is essential to the claim.</p>
+<p><strong>Inline Code</strong></p>
+<p>Use backticks for technical terms or short commands.</p>
+<p><strong>Syntax</strong></p>
+<pre><code class="language-md">`inline code`
+
+</code></pre>
+<p><strong>Example</strong>
+<code>npm run dev</code></p>
+<p><strong>Fenced Code Blocks</strong></p>
+<p>Preserve formatting and enable syntax highlighting.</p>
+<p><strong>Syntax</strong></p>
+<pre><code class="language-md">```js
+const message = "Hello, Markdown!";
+console.log(message);
+
+</code></pre>
+<pre><code>
+**Rendered Example**
+```js
+const message = "Hello, Markdown!";
+console.log(message);
+
+</code></pre>
+<p>Specify language after the opening fences for highlighting.</p>
+<p>Highlighting is not decoration; it helps the reader parse structure quickly.</p>
+<h2>Tables</h2>
+<p><strong>Tuftean Rationale: High Data Density</strong></p>
+<p>Tables are often superior to graphics for small datasets. They allow for the presentation of precise numbers and categorical data in a compact format.</p>
+<p>Tufte suggests that tables should be "rich in information but thin in ink," avoiding heavy borders that distract from the data itself.</p>
+<p>Use tables when exact values matter. A clean table lets the reader compare without decoding an image. Keep the structure simple and align numbers and labels so patterns can be seen quickly.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">| Feature      | Purpose             | Notes                       |
+|--------------|---------------------|-----------------------------|
+| Headings     | Hierarchy           | Consistent levels           |
+| Lists        | Organization        | Limit nesting depth         |
+| Code Blocks  | Technical examples  | Use language identifiers    |
+
+</code></pre>
+<p><strong>Rendered Example</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Feature     </th><th>Purpose             </th><th>Notes                       </th></tr></thead><tbody><tr><td>Headings     </td><td>Hierarchy           </td><td>Consistent levels           </td></tr><tr><td>Lists       </td><td>Organization       </td><td>Limit nesting depth         </td></tr><tr><td>Code Blocks </td><td>Technical examples </td><td>Use language identifiers   </td></tr></tbody></table>
+<p>Align columns logically and keep entries brief.</p>
+<p>If a table needs interpretation, add a caption or a short sentence directly below it to guide the reader.</p>
+<h2>Task Lists</h2>
+<p><strong>Tuftean Rationale: Functional Elements</strong></p>
+<p>Task lists serve as multifunctional elements—they provide both information (what needs to be done) and a mechanism for status tracking (what has been done).</p>
+<p>This dual-purpose design increases the utility of the document.</p>
+<p>Use them to make progress visible without adding narrative clutter. The check mark is a compact signal with a high information value, consistent with Tufte's preference for efficiency.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">- [x] Completed task
+- [ ] Pending task
+
+</code></pre>
+<p><strong>Rendered Example</strong></p>
+<ul class="contains-task-list">
+<li class="task-list-item"><input type="checkbox" checked disabled> Completed task</li>
+<li class="task-list-item"><input type="checkbox" disabled> Pending task</li>
+</ul>
+<p>Use task lists for process documentation, not for narrative sections.</p>
+<h2>sidenotes</h2>
+<p><strong>Tuftean Rationale: Parallel Information Streams</strong></p>
+<p>Sidenotes (and footnotes) allow for "side-streaming" of information. This enables the author to include necessary definitions, citations, or asides without interrupting the reader's primary focus on the main narrative.</p>
+<p>Keep sidenotes brief and relevant. They are most effective when they clarify, cite, or add a small but useful detail. Long digressions belong in the main text or a separate section.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">Text with sidenote.[^1]
+
+[^1]: The sidenotes content appears in margin.
+
+</code></pre>
+<p><strong>Example</strong></p>
+<p>Text with sidenote.<label for="sn-1" class="margin-toggle sidenote-number"></label><input type="checkbox" id="sn-1" class="margin-toggle"><span class="sidenote">The sidenotes content appears in margin.</span></p>
+<p>In this project, footnote syntax renders in the margin, so the reader never needs to jump to the bottom of the page. This keeps references close to the claim, which is a key Tufte principle.</p>
+<h2>Advanced Layout Patterns (Tufte-Inspired)</h2>
+<p><strong>Tuftean Rationale: Multi-Window Viewing and High Resolution</strong></p>
+<p>These advanced patterns utilize the full available space of the digital canvas. Margin notes and image quilts allow the reader to view multiple pieces of information simultaneously, facilitating deep analytical comparisons that a standard single-column layout cannot support.</p>
+<p>Use these patterns only when they improve comprehension. Tufte warns against empty decoration; each additional layout device should increase the clarity and density of information, not add noise.</p>
+<h3>Margin Notes</h3>
+<p>Place non-essential but helpful content (definitions, citations, asides) in the margin.</p>
+<p>They are best for short, factual additions that enrich the main paragraph without forcing the reader to detour.</p>
+<p><strong>Inline Syntax</strong></p>
+<pre><code class="language-md">*Margin note text*{:.marginnote}
+[Link as margin note](https://example.com){:.marginnote}
+
+</code></pre>
+<h3>Image Grids (Quilts)</h3>
+<p>Display related images for comparison or progression.</p>
+<p>This is the digital equivalent of Tufte's small multiples: many small views of the same subject make patterns visible.</p>
+<p><strong>Rendered example</strong></p>
+<div class="image-quilt fullwidth">
+  <img src="/static/img/img-1.png" alt="Description 1">
+  <img src="/static/img/img-2.png" alt="Description 2">
+  <img src="/static/img/img-3.png" alt="Description 3">
+  <img src="/static/img/img-4.png" alt="Description 4">
+</div>
+<p><strong>HTML Syntax</strong></p>
+<pre><code class="language-html">&#x3C;div class="image-quilt fullwidth">
+  &#x3C;img src="/static/img/img-1.png" alt="Description 1" />
+  &#x3C;img src="/static/img/img-2.png" alt="Description 2" />
+  &#x3C;img src="/static/img/img-3.png" alt="Description 3" />
+  &#x3C;img src="/static/img/img-4.png" alt="Description 4" />
+&#x3C;/div>
+
+</code></pre>
+<h3>Margin Figures with Toggle</h3>
+<p>Responsive margin images with toggle on small screens.</p>
+<p><label for="fig-1" class="margin-toggle">⊕</label>
+<input type="checkbox" id="fig-1" class="margin-toggle">
+<span class="marginnote">
+<img src="/static/img/imga.png" alt="Detailed description">
+</span></p>
+<p>This keeps the margin behavior in a narrow viewport while still honoring Tufte's preference for side-by-side evidence.</p>
+<p><strong>HTML Syntax</strong></p>
+<pre><code class="language-html">&#x3C;label for="fig-1" class="margin-toggle">&#x26;#8853;&#x3C;/label>
+&#x3C;input type="checkbox" id="fig-1" class="margin-toggle"/>
+&#x3C;span class="marginnote">
+  &#x3C;img src="/static/img/imga.png" alt="Detailed description"/>
+&#x3C;/span>
+
+</code></pre>
+<h3>Full-Width Code Blocks</h3>
+<p>Preserve long lines or horizontal alignment.</p>
+<p>Use full width when formatting or alignment is part of the meaning, such as columns or long commands.</p>
+<p><strong>HTML Syntax</strong></p>
+<pre><code class="language-html">&#x3C;pre class="fullwidth">&#x3C;code>
+# Long code that benefits from extra width
+import matplotlib.pyplot as plt
+# ... extended code
+&#x3C;/code>&#x3C;/pre>
+
+</code></pre>
+<p><strong>Rendered example</strong></p>
+<pre class="fullwidth"><code>
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+from itertools import combinations
+
+def build_the_image(n_points, n_lines, points_color='#e6aa62', line_color='#5e8b6a', file_name="output.png"):
+
+    coords = np.random.rand(n_points, 2)
+
+    fig, ax = plt.subplots(figsize=(5, 5))
+
+    fig.patch.set_facecolor('none')
+    fig.patch.set_alpha(0)
+    ax.set_facecolor('none')
+
+    todas_possibilidades = list(combinations(range(n_points), 2))
+    n_lines = min(n_lines, len(todas_possibilidades))
+    conexoes = random.sample(todas_possibilidades, n_lines)
+
+    for i, j in conexoes:
+        p1, p2 = coords[i], coords[j]
+        ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=line_color, linewidth=0.5, alpha=0.6)
+
+    ax.scatter(coords[:, 0], coords[:, 1], color=points_color, s=20, zorder=3)
+
+    ax.set_axis_off()
+    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+    plt.margins(0, 0)
+
+    plt.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight', pad_inches=0)
+    plt.close(fig)
+
+build_the_image(n_points=20, n_lines=10, file_name="img-N.png")
+
+</code></pre>
+<h3>Full-Width Tables</h3>
+<p>Accommodate wide datasets or many columns.</p>
+<p>Full-width tables should remain light on rules and heavy on useful numbers.</p>
+<p><strong>HTML Syntax</strong></p>
+<pre><code class="language-html">&#x3C;table class="fullwidth">
+  &#x3C;thead>&#x3C;tr>&#x3C;th>Column 1&#x3C;/th>&#x3C;th>Column 2&#x3C;/th>&#x3C;/tr>&#x3C;/thead>
+  &#x3C;tbody>&#x3C;/tbody>
+&#x3C;/table>
+
+</code></pre>
+<p><strong>Rendered example</strong></p>
+
+  
+    
+      
+      
+      
+      
+      
+    
+  
+  
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+    
+      
+      
+      
+      
+      
+    
+  
+  <par></par>
+  <table class="fullwidth"><thead><tr><th>Rank</th><th>Country</th><th>Projected Population (2025)</th><th>World Population %</th><th>Notes</th></tr></thead><tbody><tr><td>1</td><td>India</td><td>1.45 billion</td><td>17.5%</td><td>Most populous; surpassed China in 2023</td></tr><tr><td>2</td><td>China</td><td>1.41 billion</td><td>17.1%</td><td>Population peaking and beginning slow decline</td></tr><tr><td>3</td><td>United States</td><td>347 million</td><td>4.2%</td><td>Third place; growth driven by migration</td></tr><tr><td>4</td><td>Indonesia</td><td>286 million</td><td>3.5%</td><td>Largest Muslim-majority country by population</td></tr><tr><td>5</td><td>Pakistan</td><td>251 million</td><td>3.0%</td><td>Rapid growth; high fertility rate</td></tr><tr><td>6</td><td>Nigeria</td><td>232 million</td><td>2.8%</td><td>Fastest-growing in top 10; Africa leader</td></tr><tr><td>7</td><td>Brazil</td><td>211 million</td><td>2.6%</td><td>Largest in South America</td></tr><tr><td>8</td><td>Bangladesh</td><td>176 million</td><td>2.1%</td><td>Highest population density among large countries</td></tr><tr><td>9</td><td>Russia</td><td>146 million</td><td>1.8%</td><td>Largest by land area; declining population</td></tr><tr><td>10</td><td>Mexico</td><td>134 million</td><td>1.6%</td><td>Growth slowing; urbanization high</td></tr></tbody><caption><strong>Table 1:</strong> <italic>Top 10 Most Populous Countries in 2025 (Medium Variant Projections)</italic></caption>
+</table>
+<h3>Full-Width Figures</h3>
+<p>Allow large visuals to breathe.</p>
+<p>Use these sparingly so that wide elements remain a clear signal of importance.</p>
+<p><strong>HTML Syntax</strong></p>
+<pre><code class="language-html">&#x3C;figure class="fullwidth">
+  &#x3C;img src="/static/img/wide.png" alt="Description"/>
+    &#x3C;par>...&#x3C;/par>
+  &#x3C;figcaption>Caption explaining the figure.&#x3C;/figcaption>
+&#x3C;/figure>
+
+
+</code></pre>
+<figure class="fullwidth">
+  <img src="/static/img/img-full.png" alt="Nothing">
+</figure>
+<h3>Newthought (Small Caps Lead-In)</h3>
+<p>Subtle typographic emphasis for paragraph openings.</p>
+<p>It is a gentle cue that a new idea has begun, without the weight of a new heading.</p>
+<p><strong>HTML Syntax</strong></p>
+<pre><code class="language-html">&#x3C;span class="newthought">Opening phrase&#x3C;/span> continues the paragraph.
+
+</code></pre>
+<h2>Horizontal Rules</h2>
+<p><strong>Tuftean Rationale: Visual Separation</strong></p>
+<p>Horizontal rules act as clear, low-ink boundaries between distinct conceptual sections, signaling a transition without the need for verbose transitional text.</p>
+<p>They are most useful between major shifts in topic, not between minor paragraphs.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md"></code></pre>
+<h2>Escaping Characters</h2>
+<p><strong>Tuftean Rationale: Technical Integrity</strong></p>
+<p>The ability to escape characters ensures that the tool (Markdown) does not interfere with the data (syntax). This prevents ambiguity, ensuring the reader sees exactly what the author intended.</p>
+<p>When precision matters, show the literal characters so the reader can reproduce the result without guesswork.</p>
+<p><strong>Markdown Syntax</strong></p>
+<pre><code class="language-md">\*escaped asterisks\* and \`backticks\`
+
+</code></pre>
+<p><strong>Rendered</strong></p>
+<p><em>escaped asterisks</em> and <code>backticks</code></p>
+<h2>Inline HTML (Use Judiciously)</h2>
+<p><strong>Tuftean Rationale: Extending the Toolkit</strong></p>
+<p>Standard Markdown is occasionally insufficient for high-resolution information display. Judicious use of HTML allows the author to introduce sophisticated elements like "details/summary" tags, which provide information "on demand," maintaining a clean primary interface.</p>
+<p>Use HTML only when it improves clarity or structure. If HTML becomes the default, you lose the simplicity that makes Markdown readable.</p>
+<p><strong>Example: Expandable Section</strong></p>
+<pre><code class="language-html">&#x3C;details>
+  &#x3C;summary>Click to expand&#x3C;/summary>
+  &#x3C;p>Additional content appears here.&#x3C;/p>
+&#x3C;/details>
+
+</code></pre>
+<h2>Common Document Patterns</h2>
+<p><strong>Tuftean Rationale: Structural Appropriateness</strong>
+Matching the document pattern to the goal ensures that the layout supports the specific cognitive task—whether that is following a linear narrative (Essay) or performing a quick lookup (Reference Guide).
+Choose the smallest structure that gets the job done. A good structure reduces searching and makes evidence easy to find.</p>
+<ul>
+<li><strong>Essay</strong>: Title → Introduction → Sectioned body → Conclusion → References (use margins for citations).</li>
+<li><strong>Reference Guide</strong>: Title → Headings-based TOC → Short topical sections → Code/table examples.</li>
+<li><strong>Tutorial</strong>: Goal → Prerequisites → Numbered steps → Verification → Troubleshooting.</li>
+</ul>
+<h2>Writing Guidelines for Clarity</h2>
+<p><strong>Tuftean Rationale: Principles of Analytical Design</strong></p>
+<p>Clarity is achieved by eliminating the "middleman" of complex prose. Active voice and direct lists reduce the cognitive distance between the reader and the information.</p>
+<p>Aim for high data density with low visual noise. Every line should carry meaning, and every element should earn its space.</p>
+<ul>
+<li>Keep paragraphs concise for scannability.</li>
+<li>Favor active voice.</li>
+<li>Use lists and tables for structured data.</li>
+<li>Provide exact code in fenced blocks.</li>
+<li>Support claims with links or sidenotes.</li>
+<li>Ensure every element—text, code, image, or table—serves the reader's understanding.</li>
+</ul>
+<h2>Starter Template</h2>
+<p><strong>Tuftean Rationale: Simplification of Workflow</strong></p>
+<p>A standardized template ensures that the principles of hierarchy and layering are applied consistently across all documents, allowing the author to focus on the data rather than the formatting.</p>
+<p>Consistency is a form of respect for the reader: it creates predictable places for evidence, notes, and examples.</p>
+<pre><code class="language-md"># Document Title
+
+Brief introductory paragraph stating purpose.
+
+## First Section
+
+Core explanation with supporting examples.
+
+## Second Section
+
+- Key point one
+- Key point two
+
+## References
+
+[^1]: Source or additional note.
+
+</code></pre>
+<p>This template incorporates headings, lists, and sidenotes while remaining extensible with Tufte-style classes for margins and full-width elements as needed.</p>  </section> </article> </main> <script src="/static/js/main.min.js" defer></script> </body> </html>
