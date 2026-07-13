@@ -11,7 +11,7 @@
     "deploy": "npm run build"
   },
   "dependencies": {
-    "astro": "^5.16.6",
+    "astro": "^7.0.9",
     "katex": "^0.16.27",
     "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",
@@ -22,5 +22,9 @@
     "remark-rehype": "^11.1.2",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "esbuild@0.28.1": true
   }
 }
