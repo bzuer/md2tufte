@@ -9,14 +9,11 @@ Usage: $(basename "$0") [command] [options]
 
 Commands:
   dev                Run npm run dev
-  deploy             Build, sync, update Nginx (default)
+  deploy             Build, update Nginx, clear cache, reload (default)
 
 Options:
   --port <port>           Nginx port (default: 1213)
   --server-name <name>    Nginx server_name (default: cruz.rio.br)
-  --remote <user@host>    Remote SSH target (default: server@192.168.18.50)
-  --remote-dir <path>     Remote project dir (default: /home/server/md2html)
-  --skip-remote           Skip remote sync + Nginx updates
   -h, --help              Show this help
 USAGE
 }
@@ -27,9 +24,6 @@ require_cmd() {
 
 port="1213"
 serverName="cruz.rio.br"
-remoteHost="server@192.168.18.50"
-remoteDir="/home/server/md2html"
-skipRemote="0"
 
 command="deploy"
 if [[ $# -gt 0 && "$1" != -* ]]; then
@@ -46,18 +40,6 @@ while [[ $# -gt 0 ]]; do
     --server-name)
       serverName="$2"
       shift 2
-      ;;
-    --remote)
-      remoteHost="$2"
-      shift 2
-      ;;
-    --remote-dir)
-      remoteDir="$2"
-      shift 2
-      ;;
-    --skip-remote)
-      skipRemote="1"
-      shift
       ;;
     -h|--help)
       usage
@@ -95,8 +77,6 @@ run_dev() {
 
 run_deploy() {
   require_cmd npm
-  require_cmd rsync
-  require_cmd ssh
   require_cmd sudo
 
   sudo -v
@@ -113,10 +93,6 @@ run_deploy() {
 
   clear_nginx_cache
   reload_nginx
-
-  if [[ "$skipRemote" -eq 0 ]]; then
-    rsync -az --delete --info=stats2 "${DIR}/" "${remoteHost}:${remoteDir}/"
-  fi
 }
 
 case "$command" in

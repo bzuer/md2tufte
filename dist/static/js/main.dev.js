@@ -1,1 +1,0 @@
-console.debug("main.js carregado");

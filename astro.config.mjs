@@ -18,12 +18,16 @@ const imageMimeTypes = new Map([
   [".webp", "image/webp"],
 ]);
 
+function isImageFile(filePath) {
+  return imageMimeTypes.has(path.extname(filePath).toLowerCase());
+}
+
 function getContentType(filePath) {
   return imageMimeTypes.get(path.extname(filePath).toLowerCase()) || "application/octet-stream";
 }
 
-async function copyDir(source, destination) {
-  await fs.mkdir(destination, { recursive: true });
+// Copies only image files, so non-image sources (e.g. image-maker.py) are never published.
+async function copyImages(source, destination) {
   const entries = await fs.readdir(source, { withFileTypes: true });
   await Promise.all(
     entries.map(async (entry) => {
@@ -31,11 +35,12 @@ async function copyDir(source, destination) {
       const destinationPath = path.join(destination, entry.name);
 
       if (entry.isDirectory()) {
-        await copyDir(sourcePath, destinationPath);
+        await copyImages(sourcePath, destinationPath);
         return;
       }
 
-      if (entry.isFile()) {
+      if (entry.isFile() && isImageFile(sourcePath)) {
+        await fs.mkdir(destination, { recursive: true });
         await fs.copyFile(sourcePath, destinationPath);
       }
     })
@@ -65,7 +70,7 @@ function contentImagesPlugin() {
 
         const relativePath = decodeURIComponent(rawUrl.slice(imageRequestPrefix.length));
         const resolvedPath = path.resolve(contentImgDir, relativePath);
-        if (!resolvedPath.startsWith(contentImgDirWithSep)) {
+        if (!resolvedPath.startsWith(contentImgDirWithSep) || !isImageFile(resolvedPath)) {
           next();
           return;
         }
@@ -99,7 +104,7 @@ function contentImagesPlugin() {
         return;
       }
 
-      await copyDir(contentImgDir, path.join(outDir, "static", "img"));
+      await copyImages(contentImgDir, path.join(outDir, "static", "img"));
     },
   };
 }

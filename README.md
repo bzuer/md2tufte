@@ -24,7 +24,7 @@ Optional wrapper:
 
 ```bash
 ./scripts/manage.sh dev
-./scripts/manage.sh deploy  # build + sync + nginx (default)
+./scripts/manage.sh deploy  # build + nginx (default)
 ```
 
 Server setup (Nginx, port 1213 by default):

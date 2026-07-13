@@ -38,7 +38,7 @@ manual multi-step deploy.
 - `astro.config.mjs` — main config; also defines the `contentImagesPlugin` Vite plugin
   that serves/copies `content/img/` under `/static/img/`.
 - `scripts/` — build and deploy helpers (see below).
-- `dist/` — generated build output. **Do not edit by hand or commit.**
+- `dist/` — generated build output. Git-ignored; **do not edit by hand or commit.**
 
 ## Markdown Pipeline (`src/lib/`)
 
@@ -77,24 +77,22 @@ npm run preview    # serve the built site on port 1213
   source, never the `.min.css` output. In dev, `BaseLayout` links `styles.dev.css`; in
   prod it links `styles.min.css?v=<8-char content hash>` for cache busting.
 - **Content images**: `astro.config.mjs`'s `contentImagesPlugin` serves `/static/img/*`
-  from `content/img/` during dev and copies the folder into `dist/static/img/` at build.
+  from `content/img/` during dev and copies it into `dist/static/img/` at build.
+  Only image files are served/copied — non-image sources in `content/img/` (e.g.
+  `image-maker.py`) are never published.
 - **Astro assets**: emitted to `dist/static/_astro`.
 
-Deploy helpers (both build first):
+Deploy is local only (Nginx serves `dist/` directly; expose it via Cloudflared):
 
 ```bash
-./scripts/manage.sh dev                       # wrapper for npm run dev
-./scripts/manage.sh deploy                     # build + setup-nginx + clear cache + reload + rsync to remote
-./scripts/manage.sh deploy --skip-remote       # local-only
-./scripts/server.sh deploy                     # build + clear cache + rsync dist/ → /var/www/md2html
-./scripts/setup-nginx.sh --port 1213           # write Nginx conf + serve dist/ on 127.0.0.1:1213
+./scripts/manage.sh dev                          # wrapper for npm run dev
+./scripts/manage.sh deploy                        # build + setup-nginx + clear cache + reload
+./scripts/setup-nginx.sh --port 1213              # write Nginx conf + serve dist/ on 127.0.0.1:1213
 ./scripts/setup-nginx.sh --port 1213 --server-name cruz.rio.br
 ```
 
-- `manage.sh deploy` syncs the whole tree to the remote `server@192.168.18.50:/home/server/md2html`.
-- The root `rsync.sh` does a similar `~/md2html/ → remote` sync.
-- For Cloudflared, point the tunnel at `http://127.0.0.1:1213`; `preview` allows the
-  `cruz.rio.br` hosts.
+For Cloudflared, point the tunnel at `http://127.0.0.1:1213`; `preview` allows the
+`cruz.rio.br` hosts.
 
 Run `npm run build` before publishing to validate the static output.
 
