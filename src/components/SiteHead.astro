@@ -1,0 +1,62 @@
+---
+import { site } from "../lib/site.js";
+import { buildStructuredData } from "../lib/structured-data.js";
+
+const { metadata, stylesheet } = Astro.props;
+
+// Escaping "<" keeps a literal </script> in any future content from closing the
+// block early; JSON.stringify alone does not escape it.
+// Noindex pages describe nothing worth indexing — the 404 in particular would
+// otherwise claim to be an Article sitting in a breadcrumb.
+const structuredData = metadata.noindex
+  ? null
+  : JSON.stringify(buildStructuredData(metadata)).replace(/</g, "\\u003c");
+---
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>{metadata.documentTitle}</title>
+<meta name="description" content={metadata.description} />
+<meta name="keywords" content={metadata.keywords.join(", ")} />
+<meta name="author" content={site.author.name} />
+<meta name="robots" content={metadata.robots} />
+{/* No canonical on noindex pages: the 404 answers on every unknown URL, so a
+    self-reference would point at an address that 404s in turn. */}
+{!metadata.noindex && <link rel="canonical" href={metadata.canonical} />}
+
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" content={site.themeColor.light} media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content={site.themeColor.dark} media="(prefers-color-scheme: dark)" />
+
+<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="/static/icons/favicon-32.png" type="image/png" sizes="32x32" />
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" sizes="180x180" />
+<link rel="sitemap" href="/sitemap.xml" type="application/xml" />
+
+<meta property="og:type" content={metadata.type} />
+<meta property="og:site_name" content={site.name} />
+<meta property="og:locale" content={site.locale} />
+<meta property="og:url" content={metadata.canonical} />
+<meta property="og:title" content={metadata.title} />
+<meta property="og:description" content={metadata.description} />
+<meta property="og:image" content={metadata.image.url} />
+<meta property="og:image:alt" content={metadata.image.alt} />
+{metadata.image.width && <meta property="og:image:width" content={String(metadata.image.width)} />}
+{metadata.image.height && <meta property="og:image:height" content={String(metadata.image.height)} />}
+{metadata.type === "article" && metadata.published && (
+  <meta property="article:published_time" content={metadata.published} />
+)}
+{metadata.type === "article" && metadata.modified && (
+  <meta property="article:modified_time" content={metadata.modified} />
+)}
+{metadata.type === "article" && <meta property="article:author" content={site.author.name} />}
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={metadata.title} />
+<meta name="twitter:description" content={metadata.description} />
+<meta name="twitter:image" content={metadata.image.url} />
+<meta name="twitter:image:alt" content={metadata.image.alt} />
+
+<link rel="stylesheet" href={stylesheet} />
+
+{structuredData && <script type="application/ld+json" is:inline set:html={structuredData} />}

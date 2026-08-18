@@ -18,6 +18,7 @@ Open the URL printed by Astro to preview changes with hot reload.
 npm run dev      # development server
 npm run build    # generates minified CSS + static build to dist/
 npm run preview  # serve the built site (local preview)
+npm run assets   # regenerate the social card and icons (on demand, not part of build)
 ```
 
 Optional wrapper:
@@ -40,6 +41,12 @@ If you access the site via a custom host (e.g. Cloudflared), pass it as
 ./scripts/setup-nginx.sh --port 1213 --server-name cruz.rio.br
 ```
 
+To review the generated config without writing or reloading anything:
+
+```bash
+./scripts/setup-nginx.sh --print-config
+```
+
 For Cloudflared, point the tunnel to `http://127.0.0.1:1213`.
 
 ## Project Structure
@@ -47,11 +54,38 @@ For Cloudflared, point the tunnel to `http://127.0.0.1:1213`.
 ```
 content/              Markdown source (kept unchanged)
 content/img/          Image assets served from /static/img/
-public/static/        Tufte CSS assets and fonts
+public/static/        Tufte CSS assets and fonts, plus og/ and icons/
+src/components/       SiteHead.astro — the whole <head>
 src/layouts/          Astro layouts
-src/lib/              Markdown pipeline and Tufte helpers
-src/pages/            Astro routes (`index.astro` -> `content/index.md`, `[slug]/index.astro` -> other `content/*.md`)
+src/lib/              Markdown pipeline, metadata and site configuration
+src/pages/            Astro routes (`index.astro` -> `content/index.md`, `[slug].astro` -> other `content/*.md`,
+                      plus `404.astro`, `robots.txt.js`, `sitemap.xml.js`)
 ```
+
+## Metadata
+
+Pages describe themselves. Titles come from the first `#` heading and descriptions
+from the first prose paragraph, so a new Markdown file gets a complete `<head>` —
+canonical URL, Open Graph, Twitter card, JSON-LD — without any extra authoring.
+
+Add frontmatter only to override:
+
+```yaml
+---
+title: "The md2tufte Possibilities: a Practical Guide"
+description: A practical guide to the md2tufte Markdown syntax.
+keywords: [md2tufte, Tufte CSS, Markdown]
+noindex: false
+---
+```
+
+Site-wide values (origin, author, keywords, social card) live in one file,
+`src/lib/site.js`. `robots.txt` and `sitemap.xml` are generated from it at build
+time, so they can never point somewhere else.
+
+Canonical URLs carry **no trailing slash** (`/md2tufte`). The Nginx config redirects
+`/md2tufte/`, `/md2tufte.html`, `/index.html` and the `www` host onto that form, and
+returns a real 404 for unknown addresses.
 
 ## Markdown Support
 
@@ -60,7 +94,7 @@ src/pages/            Astro routes (`index.astro` -> `content/index.md`, `[slug]
 - Margin notes from image titles: `![Alt](path "Caption")`
 - Margin notes via `{:.marginnote}` on inline emphasis or links
 - Math: inline `$E = mc^2$` or block `$$ a^2 + b^2 = c^2 $$` (rendered with KaTeX)
-- Multi-page: any `content/*.md` (except `index.md`) is emitted at `/{filename}` via `src/pages/[slug]/index.astro`
+- Multi-page: any `content/*.md` (except `index.md`) is emitted at `/{filename}` via `src/pages/[slug].astro`
 
 ## Notes
 

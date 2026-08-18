@@ -8,7 +8,8 @@
     "build": "node scripts/build-css.js && astro build",
     "preview": "astro preview --port 1213",
     "start": "astro dev",
-    "deploy": "npm run build"
+    "deploy": "npm run build",
+    "assets": "node scripts/build-og.js"
   },
   "dependencies": {
     "astro": "^7.0.9",
@@ -26,5 +27,8 @@
   "allowScripts": {
     "sharp@0.34.5": true,
     "esbuild@0.28.1": true
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
   }
 }

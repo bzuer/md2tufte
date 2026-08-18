@@ -1,10 +1,17 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { loadContentPage } from "../lib/content.js";
+import { listContentPages } from "../lib/content.js";
 import { renderMarkdown } from "../lib/markdown.js";
 import { buildPageMetadata } from "../lib/metadata.js";
 
-const page = await loadContentPage("index.md");
+export async function getStaticPaths() {
+  const pages = await listContentPages();
+  return pages
+    .filter((page) => page.slug !== null)
+    .map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
 const metadata = buildPageMetadata(page);
 const html = await renderMarkdown(page.body);
 ---

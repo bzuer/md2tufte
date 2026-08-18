@@ -1,33 +1,16 @@
 ---
 import "katex/dist/katex.min.css";
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import SiteHead from "../components/SiteHead.astro";
+import { site } from "../lib/site.js";
+import { stylesheetHref } from "../lib/stylesheet.js";
 
-const { title = "Bruno Cruz" } = Astro.props;
-const cssPath = (() => {
-  if (import.meta.env.DEV) {
-    return `/static/css/styles.dev.css?v=${Date.now()}`;
-  }
-
-  const minCssUrl = new URL(
-    "../../public/static/css/styles.min.css",
-    import.meta.url
-  );
-  const minCssPath = fileURLToPath(minCssUrl);
-  const minCss = readFileSync(minCssPath, "utf8");
-  const hash = createHash("sha256").update(minCss).digest("hex").slice(0, 8);
-
-  return `/static/css/styles.min.css?v=${hash}`;
-})();
+const { metadata } = Astro.props;
+const stylesheet = stylesheetHref({ dev: import.meta.env.DEV });
 ---
 <!DOCTYPE html>
-<html lang="en">
+<html lang={site.lang}>
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title}</title>
-    <link rel="stylesheet" href={cssPath} />
+    <SiteHead metadata={metadata} stylesheet={stylesheet} />
   </head>
   <body>
     <a class="skip-link" href="#content">Skip to content</a>

@@ -1,3 +1,7 @@
+---
+description: Bruno Cruz — journalist and social scientist, doctoral researcher in Social Anthropology at the National Museum (UFRJ), working on Max Weber.
+keywords: [Bruno Cruz, social anthropology, Max Weber, sociology of religion, Museu Nacional, UFRJ, Ethnos, modern Western thought]
+---
 # Bruno Cruz
 
 <label for="fig-1" class="margin-toggle">&#8853;</label>

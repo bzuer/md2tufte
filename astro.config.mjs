@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "astro/config";
+import { site } from "./src/lib/site.js";
 
 const contentImgDir = path.resolve(fileURLToPath(new URL("./content/img", import.meta.url)));
 const contentImgDirWithSep = `${contentImgDir}${path.sep}`;
@@ -110,9 +111,16 @@ function contentImagesPlugin() {
 }
 
 export default defineConfig({
+  // The origin every canonical URL, og:url and sitemap <loc> is built from.
+  site: site.url,
   output: "static",
+  // "never" + "file" make /md2tufte the single canonical form: Astro emits
+  // md2tufte.html instead of md2tufte/index.html, and Nginx redirects the
+  // trailing-slash variant. See scripts/setup-nginx.sh.
+  trailingSlash: "never",
   build: {
     assets: "static/_astro",
+    format: "file",
   },
   vite: {
     plugins: [contentImagesPlugin()],

@@ -1,0 +1,22 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { buildPageMetadata } from "../lib/metadata.js";
+import { site } from "../lib/site.js";
+
+const metadata = buildPageMetadata({
+  pathname: "/404",
+  data: {
+    title: "Page not found",
+    description: "This address does not match any page on the site.",
+    noindex: true,
+  },
+});
+---
+
+<BaseLayout metadata={metadata}>
+  <h1>Page not found</h1>
+  <p>
+    This address does not match any page on the site. Return to
+    <a href="/">{site.name}</a>.
+  </p>
+</BaseLayout>

@@ -24,17 +24,27 @@ manual multi-step deploy.
 - `content/` — Markdown source (the author's writing; keep edits confined here unless
   changing the pipeline or layout).
   - `content/index.md` — home page, read directly by `src/pages/index.astro`.
-  - Any other `content/*.md` maps to `/{filename}` via `src/pages/[slug]/index.astro`
+  - Any other `content/*.md` maps to `/{filename}` via `src/pages/[slug].astro`
     (e.g. `content/md2tufte.md` → `/md2tufte`).
   - `content/img/` — image assets, referenced in Markdown as `/static/img/...`.
-- `src/pages/` — Astro routes.
-- `src/layouts/BaseLayout.astro` — shared HTML shell (KaTeX CSS, hashed stylesheet
-  link, skip link, landmark structure, deferred `main.min.js`).
-- `src/lib/` — the Markdown rendering pipeline (`remark`/`rehype`):
+- `src/pages/` — Astro routes, including `404.astro`, `robots.txt.js` and
+  `sitemap.xml.js` (both generated, see “Metadata and SEO”).
+- `src/layouts/BaseLayout.astro` — shared HTML shell (KaTeX CSS, skip link, landmark
+  structure, deferred `main.min.js`); delegates the whole `<head>` to `SiteHead`.
+- `src/components/SiteHead.astro` — every `<head>` tag: title, description, keywords,
+  canonical, icons, Open Graph, Twitter and the JSON-LD block.
+- `src/lib/` — rendering pipeline and metadata:
   - `markdown.js` — `renderMarkdown()`, the unified processor entry point.
   - `remark-sidenotes.js` — custom remark plugin implementing the sidenote/margin-note
     transforms.
-- `public/static/` — Tufte CSS assets (fonts, CSS, JS), served as `/static/`.
+  - `site.js` — single source of truth for site-wide metadata; `absoluteUrl()`.
+  - `content.js` — the only place mapping `content/*.md` to routes.
+  - `frontmatter.js` — optional YAML-subset frontmatter parser (no dependencies).
+  - `metadata.js` — frontmatter overrides layered over values derived from the Markdown.
+  - `structured-data.js` — the schema.org graph.
+  - `stylesheet.js` — dev/minified stylesheet URL with the content hash.
+- `public/static/` — Tufte CSS assets (fonts, CSS, JS), served as `/static/`, plus
+  the generated `og/` card and `icons/` set.
 - `astro.config.mjs` — main config; also defines the `contentImagesPlugin` Vite plugin
   that serves/copies `content/img/` under `/static/img/`.
 - `scripts/` — build and deploy helpers (see below).
@@ -63,6 +73,46 @@ Math is KaTeX: inline `$E = mc^2$`, block `$$ ... $$`. Raw HTML in Markdown is a
 `.image-quilt`, `.newthought`, `<label class="margin-toggle">…`, etc.) documented in
 `README.md` / `content/md2tufte.md`.
 
+## Metadata and SEO
+
+Every site-wide value — origin, author, keywords, locale, social card — lives in
+`src/lib/site.js`. Nothing that reaches a `<head>`, `robots.txt` or the sitemap is
+written down twice; `astro.config.mjs` imports `site.url` for the `site` option.
+
+Content files need **no** frontmatter: `src/lib/metadata.js` derives the title from the
+first `#` heading and the description from the first prose paragraph (skipping HTML
+blocks, headings, code and the sidenote syntax), truncated to 160 characters on a word
+boundary. Optional frontmatter overrides any of it — `title`, `description`,
+`keywords`, `image`, `imageAlt`, `date`, `noindex` — parsed by `src/lib/frontmatter.js`,
+a small YAML subset (scalars, quoted scalars, booleans, inline and block lists). A file
+without a frontmatter block, or with an unterminated one, is treated as pure Markdown.
+
+**Canonical URL form is without a trailing slash** (`/md2tufte`). This is enforced in
+three places that must stay consistent: `trailingSlash: "never"` and
+`build.format: "file"` in `astro.config.mjs` (Astro emits `md2tufte.html`), the
+`<link rel="canonical">` from `site.js`, and the Nginx redirects. `/md2tufte/`,
+`/md2tufte.html` and `/index.html` all 301 to the canonical form, and `www` folds onto
+the apex host.
+
+`robots.txt` and `sitemap.xml` are **generated routes**, not files in `public/`, so the
+sitemap URL and the `<loc>` origin cannot drift from `site.js`. The sitemap reads the
+same `listContentPages()` the `[slug]` route uses, so a new Markdown file becomes a
+route and a sitemap entry in one build; `<lastmod>` comes from file mtime, and a page
+with `noindex: true` is excluded.
+
+Unknown URLs must return a real **404** (`src/pages/404.astro`), never the home page —
+see the Nginx notes below.
+
+The social card and icons are committed static assets, regenerated on demand:
+
+```bash
+npm run assets     # node scripts/build-og.js
+```
+
+It rebuilds `public/static/og/og-default.png` (1200×630, trimmed and centred from
+`content/img/imga.png`) and `public/static/icons/`. It is deliberately **not** part of
+`npm run build`: that keeps `sharp` a devDependency and out of the render path.
+
 ## Build, Dev, and Deploy
 
 ```bash
@@ -89,10 +139,27 @@ Deploy is local only (Nginx serves `dist/` directly; expose it via Cloudflared):
 ./scripts/manage.sh deploy                        # build + setup-nginx + clear cache + reload
 ./scripts/setup-nginx.sh --port 1213              # write Nginx conf + serve dist/ on 127.0.0.1:1213
 ./scripts/setup-nginx.sh --port 1213 --server-name cruz.rio.br
+./scripts/setup-nginx.sh --print-config           # render the conf to stdout, change nothing
 ```
 
 For Cloudflared, point the tunnel at `http://127.0.0.1:1213`; `preview` allows the
 `cruz.rio.br` hosts.
+
+The generated Nginx config is part of the site's correctness, not just its plumbing:
+
+- `try_files $uri $uri.html =404` — an unknown URL must **not** fall back to
+  `/index.html`. The old fallback answered 200 with the home page for every address,
+  which search engines read as an infinite set of real pages.
+- 301s fold `/page/`, `/page.html`, `/index.html` and the `www` host onto the canonical
+  form. `absolute_redirect off` keeps `Location` path-relative so redirects survive TLS
+  terminating upstream at Cloudflare.
+- Cache lifetimes come from a `map` keyed on `$uri`, so the server block carries a
+  single `add_header` — an `add_header` inside a `location` would silently drop the
+  inherited security headers.
+- HSTS and any CSP are Cloudflare's responsibility; the origin sets
+  `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`.
+
+The first `--server-name` is the canonical host and the one `www.` redirects to.
 
 Run `npm run build` before publishing to validate the static output.
 

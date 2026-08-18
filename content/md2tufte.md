@@ -1,3 +1,8 @@
+---
+title: "The md2tufte Possibilities: a Practical Guide"
+description: "A practical guide to the md2tufte Markdown syntax: sidenotes, margin notes, full-width figures, tables and math, rendered with Tufte CSS."
+keywords: [md2tufte, Tufte CSS, Edward Tufte, Markdown, sidenotes, margin notes, Astro, static site, information design, technical writing]
+---
 # **The *md2tufte* Possibilities**: a Brief and Practical Guide 
 
 This document is a comprehensive, self-contained demonstration of Markdown syntax and advanced styling techniques, showcasing how to create clear, effective, and visually sophisticated technical writing. Written entirely in Markdown with embedded HTML where necessary, it serves as both a reference and a live example. 
