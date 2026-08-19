@@ -20,4 +20,5 @@ Project Lead of the [Ethnos](https://ethnos.app), which seeks to gather a large 
 
 Current Projects include the Portuguese translation of Max Weber’s "Gesammelte Aufsätze zur Religionssoziologie" (Collected Essays in the Sociology of Religion).
 
-Connect via [Github](https://github.com/bzuer), [Orcid](https://orcid.org/0000-0001-8652-2333) and [ResearchGate](https://www.researchgate.net/profile/Bruno-Cruz-25). Mail me: cunha@cruz.rio.br. 
+[Github](https://github.com/bzuer) ▭ [Orcid](https://orcid.org/0000-0001-8652-2333) ▭ [PPGAS](https://ppgas.museunacional.ufrj.br/)
+[Instagram](https://www.instagram.com/bzuer_) ▭ [X](https://x.com/bzuer_) ▭ [Mail](mailto:cunha@cruz.rio.br) 
