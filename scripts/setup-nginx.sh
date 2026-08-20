@@ -135,6 +135,7 @@ map \$uri \$md2html_cache_control {
   ~^/static/tgpagella/        "public, max-age=31536000, immutable";
   ~^/static/(css|js)/         "public, max-age=2592000";
   ~^/static/(img|og|icons)/   "public, max-age=2592000";
+  ~^/favicon\.ico\$            "public, max-age=2592000";
 }
 
 ${wwwRedirect}server {
@@ -157,7 +158,7 @@ ${wwwRedirect}server {
   gzip_vary on;
   gzip_min_length 1024;
   gzip_types text/plain text/css text/xml application/xml application/javascript
-             application/json image/svg+xml;
+             application/json application/manifest+json image/svg+xml;
 
   # One URL per page. Astro emits page.html (build.format "file"), so the .html
   # suffix and the trailing slash are both folded onto the canonical form.
@@ -176,6 +177,13 @@ ${wwwRedirect}server {
   # Reachable only through error_page, never as a URL of its own.
   location = /404.html {
     internal;
+  }
+
+  # This nginx build ships no .webmanifest entry in mime.types, so the type is set
+  # here. The block deliberately declares no add_header: one would replace, not
+  # extend, the security headers inherited from the server.
+  location = /site.webmanifest {
+    default_type application/manifest+json;
   }
 
   location = / {

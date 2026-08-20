@@ -18,15 +18,26 @@ Open the URL printed by Astro to preview changes with hot reload.
 npm run dev      # development server
 npm run build    # generates minified CSS + static build to dist/
 npm run preview  # serve the built site (local preview)
-npm run assets   # regenerate the social card and icons (on demand, not part of build)
+npm run assets   # regenerate the social card (on demand, not part of build)
 ```
 
 Optional wrapper:
 
 ```bash
 ./scripts/manage.sh dev
-./scripts/manage.sh deploy  # build + nginx (default)
+./scripts/manage.sh deploy   # build, nginx, verify, publish, verify again (default)
+./scripts/manage.sh publish  # purge the Cloudflare cache, submit URLs to IndexNow
+./scripts/manage.sh verify   # check a running origin over HTTP
 ```
+
+`deploy` builds, installs the Nginx config, reloads, checks the local origin, purges
+the edge cache, notifies the search engines, and checks the public site — in that
+order, so nothing is published on top of an origin that is answering wrongly. Add
+`--no-publish` or `--no-verify` to skip a stage.
+
+Cache purging needs `CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_API_TOKEN`, read from the
+environment or from a git-ignored `.env.deploy`. Without them the purge is skipped with
+a message and the deploy still succeeds.
 
 Server setup (Nginx, port 1213 by default):
 
@@ -54,12 +65,14 @@ For Cloudflared, point the tunnel to `http://127.0.0.1:1213`.
 ```
 content/              Markdown source (kept unchanged)
 content/img/          Image assets served from /static/img/
-public/static/        Tufte CSS assets and fonts, plus og/ and icons/
+public/static/        Tufte CSS assets and fonts, plus the icons/ set and og/ card
 src/components/       SiteHead.astro — the whole <head>
 src/layouts/          Astro layouts
 src/lib/              Markdown pipeline, metadata and site configuration
 src/pages/            Astro routes (`index.astro` -> `content/index.md`, `[slug].astro` -> other `content/*.md`,
-                      plus `404.astro`, `robots.txt.js`, `sitemap.xml.js`)
+                      plus `404.astro` and the generated `robots.txt`, `sitemap.xml`,
+                      `site.webmanifest`, `favicon.ico` and IndexNow key endpoints)
+scripts/              Build, deploy, publish and verify helpers
 ```
 
 ## Metadata
@@ -79,13 +92,20 @@ noindex: false
 ---
 ```
 
-Site-wide values (origin, author, keywords, social card) live in one file,
-`src/lib/site.js`. `robots.txt` and `sitemap.xml` are generated from it at build
-time, so they can never point somewhere else.
+Site-wide values (origin, author, keywords, icons, social card) live in one file,
+`src/lib/site.js`. `robots.txt`, `sitemap.xml`, `site.webmanifest`, `/favicon.ico` and
+the IndexNow key file are all generated from it at build time, so they can never point
+somewhere else.
 
 Canonical URLs carry **no trailing slash** (`/md2tufte`). The Nginx config redirects
 `/md2tufte/`, `/md2tufte.html`, `/index.html` and the `www` host onto that form, and
 returns a real 404 for unknown addresses.
+
+Publishing tells the search engines itself: `./scripts/manage.sh deploy` submits the
+sitemap's URLs to IndexNow (Bing, Yandex, Seznam, Naver). Google does not take part and
+needs no ping — it follows the `Sitemap:` line in `robots.txt` and the `<lastmod>` dates.
+The one manual step is submitting the sitemap once in Google Search Console; put the
+ownership token in `site.search.verification` if you cannot verify by DNS TXT record.
 
 ## Markdown Support
 

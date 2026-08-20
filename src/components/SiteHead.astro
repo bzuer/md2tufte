@@ -11,6 +11,8 @@ const { metadata, stylesheet } = Astro.props;
 const structuredData = metadata.noindex
   ? null
   : JSON.stringify(buildStructuredData(metadata)).replace(/</g, "\\u003c");
+
+const verification = Object.entries(site.search.verification).filter(([, token]) => token);
 ---
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -28,9 +30,14 @@ const structuredData = metadata.noindex
 <meta name="theme-color" content={site.themeColor.light} media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content={site.themeColor.dark} media="(prefers-color-scheme: dark)" />
 
-<link rel="icon" href="/static/icons/favicon.svg" type="image/svg+xml" />
-<link rel="icon" href="/static/icons/favicon-32.png" type="image/png" sizes="32x32" />
-<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" sizes="180x180" />
+{/* The PNGs come first for browsers that honour sizes; the .ico is the fallback
+    older clients and crawlers understand, and is also served from the site root. */}
+{site.icons.png.map((icon) => (
+  <link rel="icon" href={icon.path} type="image/png" sizes={icon.sizes} />
+))}
+<link rel="icon" href={site.icons.ico.path} type="image/x-icon" sizes={site.icons.ico.sizes} />
+<link rel="apple-touch-icon" href={site.icons.appleTouch.path} sizes={site.icons.appleTouch.sizes} />
+<link rel="manifest" href="/site.webmanifest" />
 <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
 
 <meta property="og:type" content={metadata.type} />
@@ -56,6 +63,9 @@ const structuredData = metadata.noindex
 <meta name="twitter:description" content={metadata.description} />
 <meta name="twitter:image" content={metadata.image.url} />
 <meta name="twitter:image:alt" content={metadata.image.alt} />
+
+{/* Console ownership tokens, emitted only when set in src/lib/site.js. */}
+{verification.map(([name, token]) => <meta name={name} content={token} />)}
 
 <link rel="stylesheet" href={stylesheet} />
 

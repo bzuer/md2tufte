@@ -27,8 +27,10 @@ manual multi-step deploy.
   - Any other `content/*.md` maps to `/{filename}` via `src/pages/[slug].astro`
     (e.g. `content/md2tufte.md` → `/md2tufte`).
   - `content/img/` — image assets, referenced in Markdown as `/static/img/...`.
-- `src/pages/` — Astro routes, including `404.astro`, `robots.txt.js` and
-  `sitemap.xml.js` (both generated, see “Metadata and SEO”).
+- `src/pages/` — Astro routes. Besides the pages themselves, `404.astro`,
+  `robots.txt.js`, `sitemap.xml.js`, `site.webmanifest.js`, `favicon.ico.js` and
+  `[indexNowKey].txt.js` are **generated endpoints**, so nothing they emit can drift
+  from `src/lib/site.js` (see “Metadata and SEO”).
 - `src/layouts/BaseLayout.astro` — shared HTML shell (KaTeX CSS, skip link, landmark
   structure, deferred `main.min.js`); delegates the whole `<head>` to `SiteHead`.
 - `src/components/SiteHead.astro` — every `<head>` tag: title, description, keywords,
@@ -43,8 +45,8 @@ manual multi-step deploy.
   - `metadata.js` — frontmatter overrides layered over values derived from the Markdown.
   - `structured-data.js` — the schema.org graph.
   - `stylesheet.js` — dev/minified stylesheet URL with the content hash.
-- `public/static/` — Tufte CSS assets (fonts, CSS, JS), served as `/static/`, plus
-  the generated `og/` card and `icons/` set.
+- `public/static/` — Tufte CSS assets (fonts, CSS, JS), served as `/static/`, plus the
+  authored `icons/` set and the generated `og/` card.
 - `astro.config.mjs` — main config; also defines the `contentImagesPlugin` Vite plugin
   that serves/copies `content/img/` under `/static/img/`.
 - `scripts/` — build and deploy helpers (see below).
@@ -103,15 +105,33 @@ with `noindex: true` is excluded.
 Unknown URLs must return a real **404** (`src/pages/404.astro`), never the home page —
 see the Nginx notes below.
 
-The social card and icons are committed static assets, regenerated on demand:
+Icons in `public/static/icons/` are **authored artwork**, not generated: `favicon.ico`,
+`favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png` and the two
+`android-chrome-*.png` install icons. `site.icons` lists them and every reference reads
+that list — the `<head>` links, `/site.webmanifest`, and `/favicon.ico`, which is served
+from the same file rather than a second copy at the site root (crawlers, feed readers
+and chat unfurlers probe that path whatever `<head>` declares). `scripts/build-og.js`
+must never write into this directory.
+
+The social card is the one generated asset, rebuilt on demand:
 
 ```bash
 npm run assets     # node scripts/build-og.js
 ```
 
 It rebuilds `public/static/og/og-default.png` (1200×630, trimmed and centred from
-`content/img/imga.png`) and `public/static/icons/`. It is deliberately **not** part of
-`npm run build`: that keeps `sharp` a devDependency and out of the render path.
+`content/img/imga.png`). It is deliberately **not** part of `npm run build`: that keeps
+`sharp` a devDependency and out of the render path.
+
+**Search engines are notified by the deploy, not by hand.** `scripts/publish.js` submits
+the sitemap's URLs to IndexNow, which fans out to Bing, Yandex, Seznam and Naver; the
+key it proves ownership with is `site.search.indexNowKey`, published at `/<key>.txt` and
+public by design. Google takes no part in IndexNow and needs no ping — the endpoint it
+once offered was retired in 2023, so it discovers changes from the `Sitemap:` line in
+`robots.txt` and each `<lastmod>` in the sitemap. Submitting the sitemap once in Google
+Search Console is the only step that stays manual; `site.search.verification` holds the
+console ownership tokens, keyed by the exact `<meta name>` each console requires, for
+the case where verifying by DNS TXT record is not an option.
 
 ## Build, Dev, and Deploy
 
@@ -135,12 +155,34 @@ npm run preview    # serve the built site on port 1213
 Deploy is local only (Nginx serves `dist/` directly; expose it via Cloudflared):
 
 ```bash
-./scripts/manage.sh dev                          # wrapper for npm run dev
-./scripts/manage.sh deploy                        # build + setup-nginx + clear cache + reload
+./scripts/manage.sh dev                           # wrapper for npm run dev
+./scripts/manage.sh deploy                        # the full pipeline, below
+./scripts/manage.sh publish                       # purge the edge, notify IndexNow
+./scripts/manage.sh verify                        # check the public origin over HTTP
 ./scripts/setup-nginx.sh --port 1213              # write Nginx conf + serve dist/ on 127.0.0.1:1213
 ./scripts/setup-nginx.sh --port 1213 --server-name cruz.rio.br
 ./scripts/setup-nginx.sh --print-config           # render the conf to stdout, change nothing
 ```
+
+`deploy` runs, in order: `npm run build` → `setup-nginx.sh` → clear the local Nginx
+cache → reload → **verify the origin** at `127.0.0.1:1213` → **publish** → **verify the
+public site**. The origin is checked before anything is published on purpose: purging
+the edge and inviting a crawl are worth nothing if the server behind them is answering
+wrongly. `--no-publish` and `--no-verify` skip those stages.
+
+- `scripts/publish.js` purges the whole Cloudflare zone — unhashed assets (images,
+  icons, the card) keep their URL when their bytes change, so a targeted purge would
+  have to know what changed — and then submits to IndexNow. It reads
+  `CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_API_TOKEN` from the environment or from
+  `.env.deploy` (git-ignored by the existing `.env.*` rule) and never prints them.
+  Absent credentials **skip** the purge with an explanation instead of failing the
+  deploy; credentials that are present and then error do fail it.
+- `scripts/verify.js` asserts over HTTP what a build can only imply: canonical tag,
+  description, `og:image`, Twitter card and JSON-LD on the home page; all four 301
+  forms; a real 404 on an unknown URL; `robots.txt`, `sitemap.xml`, the manifest, every
+  icon, the social card and the IndexNow key file; and the security and cache headers.
+  `--origin <url>` points it at any origin, which is how `deploy` checks the local
+  server and the public site with the same code.
 
 For Cloudflared, point the tunnel at `http://127.0.0.1:1213`; `preview` allows the
 `cruz.rio.br` hosts.
@@ -158,6 +200,9 @@ The generated Nginx config is part of the site's correctness, not just its plumb
   inherited security headers.
 - HSTS and any CSP are Cloudflare's responsibility; the origin sets
   `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`.
+- This Nginx build ships no `.webmanifest` entry in `mime.types`, so
+  `location = /site.webmanifest` sets `default_type`. That block declares no
+  `add_header` for the reason above.
 
 The first `--server-name` is the canonical host and the one `www.` redirects to.
 
@@ -190,10 +235,14 @@ Run `npm run build` before publishing to validate the static output.
 
 ## Testing
 
-- There is **no** automated test suite.
-- Validate changes with `npm run dev` (local review) and `npm run build` (production-like
-  check). If you add tests later, document the command here and keep test files near
-  their modules.
+- There is **no** unit-test suite.
+- `scripts/verify.js` is the standing check: it asserts the routing and metadata
+  contract over HTTP against a running origin, and `./scripts/manage.sh deploy` runs it
+  on both the origin and the public site. Run it alone with `./scripts/manage.sh verify`
+  or `node scripts/verify.js --origin http://127.0.0.1:1213`.
+- Otherwise validate with `npm run dev` (local review) and `npm run build`
+  (production-like check). If you add unit tests later, document the command here and
+  keep test files near their modules.
 
 ## Commits & Pull Requests
 

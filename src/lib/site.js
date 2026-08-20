@@ -1,11 +1,13 @@
 // Single source of truth for every site-wide metadata value. Nothing that ends up
-// in a <head>, a sitemap, or robots.txt is written down anywhere else.
+// in a <head>, a sitemap, robots.txt, or the web app manifest is written down
+// anywhere else.
 
 const url = "https://cruz.rio.br";
 
 export const site = {
   url,
   name: "Bruno Cruz",
+  shortName: "bccc",
   lang: "en",
   locale: "en_US",
   description:
@@ -36,9 +38,39 @@ export const site = {
     height: 630,
     alt: "Architectural survey drawing of a house plan, the drawing used across cruz.rio.br",
   },
+  // Authored artwork in public/static/icons/, listed here so the <head> links, the
+  // manifest and the root /favicon.ico route all read the same set. `ico` is also
+  // served from the site root, which is where crawlers and feed readers look first.
+  icons: {
+    ico: { path: "/static/icons/favicon.ico", sizes: "16x16 32x32" },
+    png: [
+      { path: "/static/icons/favicon-32x32.png", sizes: "32x32" },
+      { path: "/static/icons/favicon-16x16.png", sizes: "16x16" },
+    ],
+    appleTouch: { path: "/static/icons/apple-touch-icon.png", sizes: "180x180" },
+    // Referenced only from the manifest: the install icons Android and Chrome use.
+    app: [
+      { path: "/static/icons/android-chrome-192x192.png", sizes: "192x192" },
+      { path: "/static/icons/android-chrome-512x512.png", sizes: "512x512" },
+    ],
+  },
   themeColor: {
     light: "#ffffff",
     dark: "#151515",
+  },
+  search: {
+    // Public by design: IndexNow proves a submission came from this host by
+    // fetching /<key>.txt, which src/pages/[indexNowKey].txt.js emits from here.
+    // Set to null to stop publishing the key and skip the submission entirely.
+    indexNowKey: "336c1b6fd6489e0290c0a6f107b11ec4",
+    // One-time ownership tokens for the webmaster consoles, keyed by the exact
+    // <meta name> each one requires. Prefer verifying by DNS TXT record where the
+    // registrar allows it — that survives any change to the markup. A null token
+    // emits no tag.
+    verification: {
+      "google-site-verification": null,
+      "msvalidate.01": null,
+    },
   },
 };
 
