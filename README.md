@@ -102,6 +102,10 @@ being left on disk, where it would break the next reload of every other site.
 The dev server is the one shared default: `npm run dev` starts on Astro's port
 4321 and steps to the next free one when a sibling site already holds it.
 
+Each checkout carries its own dependencies, so a new one needs `npm install`
+before it can build — `manage.sh` says so rather than letting npm fail with
+`astro: not found`.
+
 ## Metadata
 
 Pages describe themselves. Titles come from the first `#` heading, descriptions

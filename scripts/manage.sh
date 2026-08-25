@@ -11,6 +11,17 @@ require() {
   done
 }
 
+# A checkout without node_modules fails inside npm as "astro: not found", which
+# says nothing about the fix.
+run_npm() {
+  require npm
+  [[ -x node_modules/.bin/astro ]] || {
+    echo "Dependencies are not installed in $(pwd) — run: npm install"
+    exit 1
+  }
+  npm run "$1"
+}
+
 require node
 eval "$(node scripts/config.js)"
 
@@ -153,10 +164,10 @@ run_verify() {
 }
 
 run_deploy() {
-  require npm sudo
+  require sudo
   sudo -v
 
-  npm run build
+  run_npm build
   run_nginx
 
   # The origin is checked before anything is published: an edge purge and a crawl
@@ -179,8 +190,8 @@ run_deploy() {
 }
 
 case "$command" in
-  dev) require npm; npm run dev ;;
-  build) require npm; npm run build ;;
+  dev) run_npm dev ;;
+  build) run_npm build ;;
   nginx) run_nginx ;;
   deploy) run_deploy ;;
   publish) node scripts/publish.js ;;

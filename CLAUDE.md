@@ -262,6 +262,9 @@ its own checkout on its own port. Nothing may be shared but Nginx itself:
   global belongs in `config.ini` as a per-site value, or nowhere.
 - The dev server is the one shared default: Astro starts at port 4321 and steps to the
   next free one, so a second `npm run dev` does not fail, it just moves.
+- Dependencies are per checkout: a new one needs `npm install` before it can build.
+  `manage.sh` checks for `node_modules/.bin/astro` and says so, because npm's own
+  error for a missing install (`astro: not found`) points nowhere.
 
 The generated Nginx config is part of the site's correctness, not just its plumbing:
 
