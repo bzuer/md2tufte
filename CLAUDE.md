@@ -14,43 +14,87 @@ The core goal is **technological invisibility**: the author edits `content/index
 One command runs a hot-reloading dev server; publishing is a build + sync step, not a
 manual multi-step deploy.
 
-> Heads-up on naming: the repo and public URL are `md2tufte`, but the internal
-> `package.json` name is `md2html`, and the deploy/infra paths follow that name
-> (`/var/www/md2html`, remote `/home/server/md2html`, Nginx `md2html.conf`). This is
-> intentional legacy naming — don't "fix" it without reason.
+**Two files are the whole configuration surface: `content/` and `config.ini`.** A
+change that forces the author to edit anything in `src/`, `scripts/` or
+`astro.config.mjs` to publish is a regression. Every other value is derived — from
+`config.ini`, from the Markdown itself, or from files already on disk.
+
+> Heads-up on naming: the repo, the package and the public URL are all `md2tufte`, but
+> the installed Nginx config is still `/etc/nginx/conf.d/md2html.conf`. That path is
+> the one piece of legacy naming left, and it is spelled out once, in
+> `config.ini` (`[server] nginx_conf`). Renaming it means installing the new file and
+> removing the old one by hand — two configs listening on the same port will not load.
 
 ## Project Structure
 
+- `config.ini` — every site-wide setting (see “Configuration”).
 - `content/` — Markdown source (the author's writing; keep edits confined here unless
   changing the pipeline or layout).
   - `content/index.md` — home page, read directly by `src/pages/index.astro`.
   - Any other `content/*.md` maps to `/{filename}` via `src/pages/[slug].astro`
     (e.g. `content/md2tufte.md` → `/md2tufte`).
   - `content/img/` — image assets, referenced in Markdown as `/static/img/...`.
+- `docs/` — reference material, never built or published: `tufte.css` (the upstream
+  Tufte CSS this site's stylesheet descends from) and `image-maker.py` (the script the
+  author generated the artwork with).
 - `src/pages/` — Astro routes. Besides the pages themselves, `404.astro`,
   `robots.txt.js`, `sitemap.xml.js`, `site.webmanifest.js`, `favicon.ico.js` and
   `[indexNowKey].txt.js` are **generated endpoints**, so nothing they emit can drift
-  from `src/lib/site.js` (see “Metadata and SEO”).
+  from `config.ini`.
 - `src/layouts/BaseLayout.astro` — shared HTML shell (KaTeX CSS, skip link, landmark
-  structure, deferred `main.min.js`); delegates the whole `<head>` to `SiteHead`.
+  structure); delegates the whole `<head>` to `SiteHead`.
 - `src/components/SiteHead.astro` — every `<head>` tag: title, description, keywords,
   canonical, icons, Open Graph, Twitter and the JSON-LD block.
-- `src/lib/` — rendering pipeline and metadata:
+- `src/lib/` — configuration, rendering pipeline and metadata:
+  - `paths.js` — the project's directories, all resolved from the working directory.
+  - `config.js` — parses `config.ini` and exports `site`, `absoluteUrl()`,
+    `documentTitle()`. The single source of site-wide metadata.
+  - `assets.js` — facts read off files instead of configured: image dimensions, the
+    icon set, the content-hashed stylesheet URL.
   - `markdown.js` — `renderMarkdown()`, the unified processor entry point.
   - `remark-sidenotes.js` — custom remark plugin implementing the sidenote/margin-note
     transforms.
-  - `site.js` — single source of truth for site-wide metadata; `absoluteUrl()`.
+  - `content-images.js` — Vite plugin serving/copying `content/img/` as `/static/img/`.
   - `content.js` — the only place mapping `content/*.md` to routes.
   - `frontmatter.js` — optional YAML-subset frontmatter parser (no dependencies).
   - `metadata.js` — frontmatter overrides layered over values derived from the Markdown.
   - `structured-data.js` — the schema.org graph.
-  - `stylesheet.js` — dev/minified stylesheet URL with the content hash.
-- `public/static/` — Tufte CSS assets (fonts, CSS, JS), served as `/static/`, plus the
+- `public/static/` — Tufte CSS assets (fonts, CSS), served as `/static/`, plus the
   authored `icons/` set and the generated `og/` card.
-- `astro.config.mjs` — main config; also defines the `contentImagesPlugin` Vite plugin
-  that serves/copies `content/img/` under `/static/img/`.
-- `scripts/` — build and deploy helpers (see below).
+- `astro.config.mjs` — Astro options only; everything variable comes from `config.js`.
+- `scripts/` — build, Nginx, publish and verify helpers (see below).
 - `dist/` — generated build output. Git-ignored; **do not edit by hand or commit.**
+
+## Configuration (`config.ini`)
+
+One INI file, five sections, no comments to maintain:
+
+- `[site]` — `url`, `name`, `short_name`, `language`, `description`, `keywords`,
+  `theme_light`, `theme_dark`, `card_source`, `card_alt`.
+- `[author]` — `name`, `role`, `affiliation`, `links` (comma-separated, becomes
+  schema.org `sameAs`).
+- `[server]` — `port`, and `nginx_conf` when the generated config should not go to
+  `/etc/nginx/conf.d/<project directory>.conf`.
+- `[search]` — `indexnow_key`; empty stops publishing the key file and skips submission.
+- `[verification]` — one key per webmaster console, named exactly as the `<meta name>`
+  it requires. An empty value emits no tag.
+
+Anything that can be derived is **not** in the file, and must not be added to it:
+
+- `server_name` and the `www` redirect, the preview's `allowedHosts`, IndexNow's
+  `host` and `keyLocation`, and every absolute URL come from `[site] url`.
+- `language` gives both `<html lang>` and `og:locale` (`en-US` → `en_US`); a tag
+  without a region emits no `og:locale`.
+- The icon set is whatever `public/static/icons/` holds, classified by filename —
+  `favicon.ico`, `favicon-*.png`, `apple-touch-icon.png`, `android-chrome-*.png` — with
+  the sizes read out of the PNG and ICO headers. Adding a file is the whole change.
+- The social card's dimensions are read from the PNG; only its alt text and the source
+  artwork are configured.
+- Nginx's `root` and the sitemap path come from `paths.js`.
+
+Cloudflare credentials stay out of `config.ini` because they are secret:
+`CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_API_TOKEN`, in the environment or in a
+git-ignored `.env.deploy`.
 
 ## Markdown Pipeline (`src/lib/`)
 
@@ -73,13 +117,13 @@ can turn note content into HTML before rehype runs. It handles:
 Math is KaTeX: inline `$E = mc^2$`, block `$$ ... $$`. Raw HTML in Markdown is allowed
 (`rehype-raw`), which is what enables the Tufte layout classes (`.fullwidth`,
 `.image-quilt`, `.newthought`, `<label class="margin-toggle">…`, etc.) documented in
-`README.md` / `content/md2tufte.md`.
+`README.md` / `content/md2tufte.md`. Note that Markdown inside a block-level HTML
+element is *not* parsed — write links there as `<a href>`, not `[text](url)`.
+
+The site ships no client-side JavaScript: the margin-note toggles are CSS checkboxes.
+Do not reintroduce a script tag without a reason a reader would feel.
 
 ## Metadata and SEO
-
-Every site-wide value — origin, author, keywords, locale, social card — lives in
-`src/lib/site.js`. Nothing that reaches a `<head>`, `robots.txt` or the sitemap is
-written down twice; `astro.config.mjs` imports `site.url` for the `site` option.
 
 Content files need **no** frontmatter: `src/lib/metadata.js` derives the title from the
 first `#` heading and the description from the first prose paragraph (skipping HTML
@@ -92,26 +136,25 @@ without a frontmatter block, or with an unterminated one, is treated as pure Mar
 **Canonical URL form is without a trailing slash** (`/md2tufte`). This is enforced in
 three places that must stay consistent: `trailingSlash: "never"` and
 `build.format: "file"` in `astro.config.mjs` (Astro emits `md2tufte.html`), the
-`<link rel="canonical">` from `site.js`, and the Nginx redirects. `/md2tufte/`,
-`/md2tufte.html` and `/index.html` all 301 to the canonical form, and `www` folds onto
-the apex host.
+`<link rel="canonical">` built from `[site] url`, and the Nginx redirects.
+`/md2tufte/`, `/md2tufte.html` and `/index.html` all 301 to the canonical form, and
+`www` folds onto the apex host.
 
 `robots.txt` and `sitemap.xml` are **generated routes**, not files in `public/`, so the
-sitemap URL and the `<loc>` origin cannot drift from `site.js`. The sitemap reads the
-same `listContentPages()` the `[slug]` route uses, so a new Markdown file becomes a
-route and a sitemap entry in one build; `<lastmod>` comes from file mtime, and a page
-with `noindex: true` is excluded.
+sitemap URL and the `<loc>` origin cannot drift. The sitemap reads the same
+`listContentPages()` the `[slug]` route uses, so a new Markdown file becomes a route
+and a sitemap entry in one build; `<lastmod>` comes from file mtime, and a page with
+`noindex: true` is excluded.
 
 Unknown URLs must return a real **404** (`src/pages/404.astro`), never the home page —
 see the Nginx notes below.
 
-Icons in `public/static/icons/` are **authored artwork**, not generated: `favicon.ico`,
-`favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png` and the two
-`android-chrome-*.png` install icons. `site.icons` lists them and every reference reads
-that list — the `<head>` links, `/site.webmanifest`, and `/favicon.ico`, which is served
-from the same file rather than a second copy at the site root (crawlers, feed readers
-and chat unfurlers probe that path whatever `<head>` declares). `scripts/build-og.js`
-must never write into this directory.
+Icons in `public/static/icons/` are **authored artwork**, not generated. They are not
+listed anywhere: `src/lib/assets.js` reads the directory and the image headers, and the
+`<head>` links, `/site.webmanifest`, `/favicon.ico` and `scripts/verify.js` all consume
+that one derived set. `/favicon.ico` is served from the same file rather than a second
+copy at the site root (crawlers, feed readers and chat unfurlers probe that path
+whatever `<head>` declares). `scripts/build-og.js` must never write into this directory.
 
 The social card is the one generated asset, rebuilt on demand:
 
@@ -120,18 +163,17 @@ npm run assets     # node scripts/build-og.js
 ```
 
 It rebuilds `public/static/og/og-default.png` (1200×630, trimmed and centred from
-`content/img/imga.png`). It is deliberately **not** part of `npm run build`: that keeps
+`[site] card_source`). It is deliberately **not** part of `npm run build`: that keeps
 `sharp` a devDependency and out of the render path.
 
 **Search engines are notified by the deploy, not by hand.** `scripts/publish.js` submits
 the sitemap's URLs to IndexNow, which fans out to Bing, Yandex, Seznam and Naver; the
-key it proves ownership with is `site.search.indexNowKey`, published at `/<key>.txt` and
+key it proves ownership with is `[search] indexnow_key`, published at `/<key>.txt` and
 public by design. Google takes no part in IndexNow and needs no ping — the endpoint it
 once offered was retired in 2023, so it discovers changes from the `Sitemap:` line in
 `robots.txt` and each `<lastmod>` in the sitemap. Submitting the sitemap once in Google
-Search Console is the only step that stays manual; `site.search.verification` holds the
-console ownership tokens, keyed by the exact `<meta name>` each console requires, for
-the case where verifying by DNS TXT record is not an option.
+Search Console is the only step that stays manual; `[verification]` holds the console
+ownership tokens for the case where verifying by DNS TXT record is not an option.
 
 ## Build, Dev, and Deploy
 
@@ -139,72 +181,105 @@ the case where verifying by DNS TXT record is not an option.
 npm install        # install dependencies
 npm run dev        # Astro dev server with hot reload
 npm run build      # build-css.js (min CSS) + astro build → dist/
-npm run preview    # serve the built site on port 1213
+npm run preview    # serve the built site on Astro's default port
+npm run assets     # regenerate the social card
 ```
 
 - **CSS**: `scripts/build-css.js` minifies `public/static/css/styles.dev.css` →
   `styles.min.css` (preserving `/*! ... */` license comments). Edit the `.dev.css`
   source, never the `.min.css` output. In dev, `BaseLayout` links `styles.dev.css`; in
   prod it links `styles.min.css?v=<8-char content hash>` for cache busting.
-- **Content images**: `astro.config.mjs`'s `contentImagesPlugin` serves `/static/img/*`
-  from `content/img/` during dev and copies it into `dist/static/img/` at build.
-  Only image files are served/copied — non-image sources in `content/img/` (e.g.
-  `image-maker.py`) are never published.
+- **Content images**: `src/lib/content-images.js` serves `/static/img/*` from
+  `content/img/` during dev and copies it into `dist/static/img/` at build. Only image
+  files are served/copied, so anything else left beside the artwork stays unpublished.
 - **Astro assets**: emitted to `dist/static/_astro`.
+- **Preview** runs on Astro's default port, not `[server] port`: Nginx already holds
+  that one. It accepts the configured host so the built site can also be previewed
+  through the tunnel.
 
-Deploy is local only (Nginx serves `dist/` directly; expose it via Cloudflared):
+Deploy is local only (Nginx serves `dist/` directly; expose it via Cloudflared).
+`scripts/manage.sh` is the single entry point, and takes no settings of its own — it
+reads `config.ini` through `node scripts/config.js`:
 
 ```bash
-./scripts/manage.sh dev                           # wrapper for npm run dev
-./scripts/manage.sh deploy                        # the full pipeline, below
-./scripts/manage.sh publish                       # purge the edge, notify IndexNow
-./scripts/manage.sh verify                        # check the public origin over HTTP
-./scripts/setup-nginx.sh --port 1213              # write Nginx conf + serve dist/ on 127.0.0.1:1213
-./scripts/setup-nginx.sh --port 1213 --server-name cruz.rio.br
-./scripts/setup-nginx.sh --print-config           # render the conf to stdout, change nothing
+./scripts/manage.sh dev
+./scripts/manage.sh build
+./scripts/manage.sh nginx            # install the generated config and reload
+./scripts/manage.sh nginx --print    # render it to stdout, change nothing
+./scripts/manage.sh deploy           # the full pipeline, below
+./scripts/manage.sh publish          # purge the edge, notify IndexNow
+./scripts/manage.sh verify           # check the public origin over HTTP
+./scripts/manage.sh verify --origin http://127.0.0.1:1213
 ```
 
-`deploy` runs, in order: `npm run build` → `setup-nginx.sh` → clear the local Nginx
-cache → reload → **verify the origin** at `127.0.0.1:1213` → **publish** → **verify the
-public site**. The origin is checked before anything is published on purpose: purging
-the edge and inviting a crawl are worth nothing if the server behind them is answering
-wrongly. `--no-publish` and `--no-verify` skip those stages.
+`deploy` runs, in order: `npm run build` → install the Nginx config and reload →
+**verify the origin** at `127.0.0.1:<port>` → **publish** → **verify the public site**.
+The origin is checked before anything is published on purpose: purging the edge and
+inviting a crawl are worth nothing if the server behind them is answering wrongly.
+`--no-publish` and `--no-verify` skip those stages.
 
+The Nginx config is **regenerated and reinstalled on every deploy**, so the server can
+never keep serving a stale copy — an earlier version of this project broke exactly that
+way, answering 500 from a path that no longer existed after the repo was renamed.
+
+- `scripts/nginx.js` renders the config from `config.ini` and prints it; it needs no
+  root, so the output can be read before it is installed. `manage.sh nginx` installs it,
+  grants the Nginx user traversal into the site root (ACLs, falling back to `chmod`),
+  runs `nginx -t` and reloads.
 - `scripts/publish.js` purges the whole Cloudflare zone — unhashed assets (images,
   icons, the card) keep their URL when their bytes change, so a targeted purge would
-  have to know what changed — and then submits to IndexNow. It reads
-  `CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_API_TOKEN` from the environment or from
-  `.env.deploy` (git-ignored by the existing `.env.*` rule) and never prints them.
-  Absent credentials **skip** the purge with an explanation instead of failing the
-  deploy; credentials that are present and then error do fail it.
+  have to know what changed — and then submits to IndexNow. Absent credentials **skip**
+  the purge with an explanation instead of failing the deploy; credentials that are
+  present and then error do fail it. They are never printed.
 - `scripts/verify.js` asserts over HTTP what a build can only imply: canonical tag,
-  description, `og:image`, Twitter card and JSON-LD on the home page; all four 301
-  forms; a real 404 on an unknown URL; `robots.txt`, `sitemap.xml`, the manifest, every
-  icon, the social card and the IndexNow key file; and the security and cache headers.
-  `--origin <url>` points it at any origin, which is how `deploy` checks the local
+  description, `og:image`, Twitter card and JSON-LD on the home page; the 301 forms; a
+  real 404 on an unknown URL; `robots.txt`, `sitemap.xml`, the manifest, every icon, the
+  social card and the IndexNow key file; and the security and cache headers. It probes
+  whichever page the author happens to have written — never a hardcoded slug —
+  and `--origin <url>` points it at any origin, which is how `deploy` checks the local
   server and the public site with the same code.
 
-For Cloudflared, point the tunnel at `http://127.0.0.1:1213`; `preview` allows the
-`cruz.rio.br` hosts.
+For Cloudflared, point the tunnel at `http://127.0.0.1:<port>`.
+
+### Several sites from this template on one server
+
+One machine can serve any number of these sites — `md2tufte`, `md2lfdd`, … — each
+its own checkout on its own port. Nothing may be shared but Nginx itself:
+
+- `[server] port` is what separates them. `default_server` is scoped to an
+  `address:port` pair, so one per port is correct; two on the *same* port stop Nginx
+  from loading at all and take down every site on the box. `manage.sh nginx` therefore
+  scans `conf.d/` and `sites-enabled/` and refuses to install onto a port another
+  config already listens on.
+- `nginx_conf` defaults to the project's directory name, so a second checkout never
+  overwrites the first one's config, and the cache `map` variable is named after that
+  file, so two configs never declare the same variable.
+- A generated config that fails `nginx -t` is rolled back to the previous version (or
+  removed, if there was none). Leaving a rejected config in `conf.d/` would break the
+  next reload of every *other* site, not just this one.
+- Nothing else touches shared state: no pm2 process, no shared cache directory, no
+  fixed asset path outside the project. Keep it that way — a step that writes anywhere
+  global belongs in `config.ini` as a per-site value, or nowhere.
+- The dev server is the one shared default: Astro starts at port 4321 and steps to the
+  next free one, so a second `npm run dev` does not fail, it just moves.
 
 The generated Nginx config is part of the site's correctness, not just its plumbing:
 
 - `try_files $uri $uri.html =404` — an unknown URL must **not** fall back to
-  `/index.html`. The old fallback answered 200 with the home page for every address,
-  which search engines read as an infinite set of real pages.
+  `/index.html`. That fallback answers 200 with the home page for every address, which
+  search engines read as an infinite set of real pages.
 - 301s fold `/page/`, `/page.html`, `/index.html` and the `www` host onto the canonical
   form. `absolute_redirect off` keeps `Location` path-relative so redirects survive TLS
   terminating upstream at Cloudflare.
 - Cache lifetimes come from a `map` keyed on `$uri`, so the server block carries a
   single `add_header` — an `add_header` inside a `location` would silently drop the
-  inherited security headers.
+  inherited security headers. The map variable is named after the config file to avoid
+  colliding with another site on the same server.
 - HSTS and any CSP are Cloudflare's responsibility; the origin sets
   `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`.
 - This Nginx build ships no `.webmanifest` entry in `mime.types`, so
   `location = /site.webmanifest` sets `default_type`. That block declares no
   `add_header` for the reason above.
-
-The first `--server-name` is the canonical host and the one `www.` redirects to.
 
 Run `npm run build` before publishing to validate the static output.
 
@@ -223,13 +298,17 @@ Run `npm run build` before publishing to validate the static output.
 
 ## Quality, Hygiene, and Security
 
+- Before adding a setting anywhere, check whether it is already implied by something
+  else. A value written twice is a value that will disagree with itself.
 - Keep code clean, readable, and minimal; remove obsolete or redundant content.
 - Do not commit generated artifacts (`dist/`), backups, logs, or temp files.
 - Avoid `TODO`/`FIXME`/`HACK` markers and commented-out code; keep only essential
-  comments.
+  comments — those that explain *why*, not *what*.
 - Log output should be concise and must not expose sensitive information.
 - Preserve accessible HTML: keep the landmark structure and the skip link in
   `BaseLayout.astro`, and keep meaningful `alt` text on images.
+- `README.md` documents the project for a reader; `content/md2tufte.md` is the syntax
+  guide and the published example. Neither should copy the other.
 - Keep `CLAUDE.md` and `README.md` current when behavior changes. `AGENTS.md` is a
   symlink to this file, so updating `CLAUDE.md` updates both.
 
@@ -239,7 +318,10 @@ Run `npm run build` before publishing to validate the static output.
 - `scripts/verify.js` is the standing check: it asserts the routing and metadata
   contract over HTTP against a running origin, and `./scripts/manage.sh deploy` runs it
   on both the origin and the public site. Run it alone with `./scripts/manage.sh verify`
-  or `node scripts/verify.js --origin http://127.0.0.1:1213`.
+  or `./scripts/manage.sh verify --origin http://127.0.0.1:1213`.
+- To exercise the generated Nginx config without touching the installed one, render it
+  with `./scripts/manage.sh nginx --print`, change the port, and run a throwaway
+  `nginx -p <prefix> -c <conf>` instance to verify against.
 - Otherwise validate with `npm run dev` (local review) and `npm run build`
   (production-like check). If you add unit tests later, document the command here and
   keep test files near their modules.
