@@ -3,14 +3,10 @@
 
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { contentDir } from "./paths.js";
 import { splitFrontmatter } from "./frontmatter.js";
 
 const HOME_FILE = "index.md";
-
-// Resolved from the working directory, not from import.meta.url: the build bundles
-// this module into dist/.prerender/chunks/, where a path relative to the module
-// would point outside the project. Astro runs dev and build from the project root.
-export const contentDir = path.resolve(process.cwd(), "content");
 
 function pathnameFor(filename) {
   return filename === HOME_FILE ? "/" : `/${filename.slice(0, -3)}`;

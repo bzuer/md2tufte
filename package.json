@@ -1,14 +1,12 @@
 {
-  "name": "md2html",
+  "name": "md2tufte",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "node scripts/build-css.js && astro build",
-    "preview": "astro preview --port 1213",
-    "start": "astro dev",
-    "deploy": "npm run build",
+    "preview": "astro preview",
     "assets": "node scripts/build-og.js"
   },
   "dependencies": {

@@ -4,7 +4,7 @@
 // every major crawler, and inventing values for them would be noise.
 
 import { listContentPages } from "../lib/content.js";
-import { absoluteUrl } from "../lib/site.js";
+import { absoluteUrl } from "../lib/config.js";
 
 export const prerender = true;
 

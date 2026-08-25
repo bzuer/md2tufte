@@ -1,7 +1,7 @@
 // Derives page metadata from the Markdown itself, so a content file needs no
 // frontmatter to be fully described. Frontmatter, when present, always wins.
 
-import { site, absoluteUrl, documentTitle } from "./site.js";
+import { site, absoluteUrl, documentTitle } from "./config.js";
 
 const DESCRIPTION_LIMIT = 160;
 
@@ -60,10 +60,12 @@ export function deriveDescription(body) {
 }
 
 function resolveImage(data) {
-  if (!data.image) return { ...site.image, url: absoluteUrl(site.image.path) };
+  const { path, alt, width, height } = site.image;
+  if (!data.image) return { url: absoluteUrl(path), alt, width, height };
+
   return {
     url: absoluteUrl(data.image),
-    alt: data.imageAlt || site.image.alt,
+    alt: data.imageAlt || alt,
     width: null,
     height: null,
   };

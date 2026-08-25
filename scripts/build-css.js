@@ -1,23 +1,19 @@
+// Minifies public/static/css/styles.dev.css into styles.min.css, keeping
+// /*! ... */ license comments. Edit the .dev.css source, never the output.
+
 import { readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { publicPath } from "../src/lib/paths.js";
 
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(scriptDir, "..");
-const devPath = path.join(rootDir, "public", "static", "css", "styles.dev.css");
-const minPath = path.join(rootDir, "public", "static", "css", "styles.min.css");
+const source = publicPath("/static/css/styles.dev.css");
+const target = publicPath("/static/css/styles.min.css");
 
-const minifyCss = (css) => {
-  const withoutComments = css.replace(/\/\*[^!][\s\S]*?\*\//g, "");
-  const collapsedWhitespace = withoutComments.replace(/\s+/g, " ");
-  const tightened = collapsedWhitespace.replace(/\s*([:;{},>])\s*/g, "$1");
-  return tightened.replace(/;}/g, "}").trim() + "\n";
-};
+function minify(css) {
+  return `${css
+    .replace(/\/\*[^!][\s\S]*?\*\//g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([:;{},>])\s*/g, "$1")
+    .replace(/;}/g, "}")
+    .trim()}\n`;
+}
 
-const build = async () => {
-  const css = await readFile(devPath, "utf8");
-  const minified = minifyCss(css);
-  await writeFile(minPath, minified, "utf8");
-};
-
-await build();
+await writeFile(target, minify(await readFile(source, "utf8")), "utf8");

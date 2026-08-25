@@ -1,25 +1,32 @@
 // Post-deploy check against a running origin: every routing and metadata rule the
 // site depends on, asserted over HTTP rather than assumed from the build output.
+// Run from the project root, or through scripts/manage.sh, which cds there.
 //
-//   node scripts/verify.js                            # the public origin
+//   node scripts/verify.js                                  # the public origin
 //   node scripts/verify.js --origin http://127.0.0.1:1213   # behind the edge
 //
 // Exits non-zero on the first failing expectation, so `manage.sh deploy` stops
 // with a reason instead of reporting success it has not confirmed.
 
-import { site } from "../src/lib/site.js";
+import { site } from "../src/lib/config.js";
+import { listContentPages } from "../src/lib/content.js";
 
-const args = process.argv.slice(2);
-const originIndex = args.indexOf("--origin");
-const origin = (originIndex === -1 ? site.url : args[originIndex + 1]).replace(/\/$/, "");
-const canonicalHost = new URL(site.url).host;
-
+const USER_AGENT = "md2tufte-verify";
 const SECURITY_HEADERS = [
   "x-content-type-options",
   "referrer-policy",
   "x-frame-options",
   "permissions-policy",
 ];
+
+const args = process.argv.slice(2);
+const originIndex = args.indexOf("--origin");
+const origin = (originIndex === -1 ? site.url : args[originIndex + 1]).replace(/\/$/, "");
+
+// Whichever page the author happens to have written: the checks below are about
+// the contract every non-home page shares, not about one file.
+const pages = await listContentPages();
+const article = pages.find((page) => page.slug !== null)?.pathname ?? null;
 
 const checks = [
   {
@@ -30,22 +37,26 @@ const checks = [
     body: [
       new RegExp(`<link rel="canonical" href="${site.url}/">`),
       /<meta name="description" content=".+"/,
-      /<meta property="og:image" content="[^"]+\/static\/og\//,
+      new RegExp(`<meta property="og:image" content="[^"]+${site.image.path}"`),
       /<meta name="twitter:card" content="summary_large_image">/,
       /<script type="application\/ld\+json">/,
     ],
   },
-  {
-    label: "article",
-    path: "/md2tufte",
-    status: 200,
-    body: [
-      new RegExp(`<link rel="canonical" href="${site.url}/md2tufte">`),
-      /<meta property="og:type" content="article">/,
-    ],
-  },
-  { label: "trailing slash", path: "/md2tufte/", status: 301, location: "/md2tufte" },
-  { label: ".html suffix", path: "/md2tufte.html", status: 301, location: "/md2tufte" },
+  ...(article
+    ? [
+        {
+          label: "article",
+          path: article,
+          status: 200,
+          body: [
+            new RegExp(`<link rel="canonical" href="${site.url}${article}">`),
+            /<meta property="og:type" content="article">/,
+          ],
+        },
+        { label: "trailing slash", path: `${article}/`, status: 301, location: article },
+        { label: ".html suffix", path: `${article}.html`, status: 301, location: article },
+      ]
+    : []),
   { label: "index.html", path: "/index.html", status: 301, location: "/" },
   { label: "unknown URL", path: "/verify-404-probe", status: 404 },
   {
@@ -63,12 +74,6 @@ const checks = [
     body: [/<urlset /, new RegExp(`<loc>${site.url}/</loc>`), /<lastmod>/],
   },
   {
-    label: "favicon.ico",
-    path: "/favicon.ico",
-    status: 200,
-    headers: { "content-type": /^image\// },
-  },
-  {
     label: "manifest",
     path: "/site.webmanifest",
     status: 200,
@@ -80,7 +85,10 @@ const checks = [
     status: 200,
     headers: { "content-type": /^image\/png/ },
   },
-  ...site.icons.app.concat(site.icons.png, [site.icons.appleTouch]).map((icon) => ({
+  ...(site.icons.ico
+    ? [{ label: "favicon.ico", path: "/favicon.ico", status: 200, headers: { "content-type": /^image\// } }]
+    : []),
+  ...[...site.icons.png, ...site.icons.app, site.icons.appleTouch].filter(Boolean).map((icon) => ({
     label: `icon ${icon.sizes}`,
     path: icon.path,
     status: 200,
@@ -99,22 +107,18 @@ if (site.search.indexNowKey) {
 
 // The www host is folded onto the apex by Nginx, but only the public origin can
 // exercise it: a local probe never carries that Host header.
-if (new URL(origin).host === canonicalHost) {
+if (new URL(origin).host === site.host && article) {
   checks.push({
     label: "www redirect",
-    url: `https://www.${canonicalHost}/md2tufte`,
+    url: `https://www.${site.host}${article}`,
     status: 301,
-    location: "/md2tufte",
+    location: article,
   });
 }
 
-function describe(check) {
-  return check.url || `${origin}${check.path}`;
-}
-
 async function runCheck(check) {
-  const url = describe(check);
-  const response = await fetch(url, { redirect: "manual", headers: { "user-agent": "md2html-verify" } });
+  const url = check.url || `${origin}${check.path}`;
+  const response = await fetch(url, { redirect: "manual", headers: { "user-agent": USER_AGENT } });
   const problems = [];
 
   if (response.status !== check.status) {
@@ -133,9 +137,7 @@ async function runCheck(check) {
 
   for (const [header, pattern] of Object.entries(check.headers ?? {})) {
     const value = response.headers.get(header);
-    if (!value || !pattern.test(value)) {
-      problems.push(`${header}: ${value ?? "absent"}`);
-    }
+    if (!value || !pattern.test(value)) problems.push(`${header}: ${value ?? "absent"}`);
   }
 
   if (check.body?.length) {
@@ -149,7 +151,7 @@ async function runCheck(check) {
 }
 
 async function runSecurityHeaders() {
-  const response = await fetch(`${origin}/`, { headers: { "user-agent": "md2html-verify" } });
+  const response = await fetch(`${origin}/`, { headers: { "user-agent": USER_AGENT } });
   const missing = SECURITY_HEADERS.filter((header) => !response.headers.get(header));
   if (!response.headers.get("cache-control")) missing.push("cache-control");
   return missing.map((header) => `${header}: absent`);

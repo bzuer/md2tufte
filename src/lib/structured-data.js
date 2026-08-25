@@ -3,7 +3,7 @@
 // The author's email is deliberately absent: it is obfuscated in the page body
 // and repeating it here in clear text would hand it straight to scrapers.
 
-import { site, absoluteUrl } from "./site.js";
+import { site, absoluteUrl } from "./config.js";
 
 const WEBSITE_ID = `${site.url}/#website`;
 const PERSON_ID = `${site.url}/#person`;
@@ -14,11 +14,10 @@ function personNode() {
     "@id": PERSON_ID,
     name: site.author.name,
     url: absoluteUrl("/"),
-    jobTitle: "Doctoral researcher in Social Anthropology",
-    affiliation: {
-      "@type": "CollegeOrUniversity",
-      name: site.author.affiliation,
-    },
+    ...(site.author.role ? { jobTitle: site.author.role } : {}),
+    ...(site.author.affiliation
+      ? { affiliation: { "@type": "CollegeOrUniversity", name: site.author.affiliation } }
+      : {}),
     sameAs: site.author.sameAs,
   };
 }

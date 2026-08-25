@@ -1,20 +1,14 @@
 // Generated rather than kept in public/ so the sitemap URL stays tied to
-// src/lib/site.js and cannot drift from the origin the canonical tags use.
+// config.ini and cannot drift from the origin the canonical tags use.
 
-import { absoluteUrl } from "../lib/site.js";
+import { absoluteUrl } from "../lib/config.js";
 
 export const prerender = true;
 
 export function GET() {
-  const body = [
-    "User-agent: *",
-    "Allow: /",
-    "",
-    `Sitemap: ${absoluteUrl("/sitemap.xml")}`,
-    "",
-  ].join("\n");
+  const body = ["User-agent: *", "Allow: /", "", `Sitemap: ${absoluteUrl("/sitemap.xml")}`, ""];
 
-  return new Response(body, {
+  return new Response(body.join("\n"), {
     headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }

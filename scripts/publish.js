@@ -1,6 +1,6 @@
 // Post-deploy publication: drop the edge cache, then tell the search engines.
 //
-//   node scripts/publish.js [--skip-purge] [--skip-indexnow] [--root dist]
+//   node scripts/publish.js [--skip-purge] [--skip-indexnow]
 //
 // Run by `scripts/manage.sh deploy` after Nginx reloads. Both steps are optional
 // and skip with an explanation rather than failing the deploy, so an unconfigured
@@ -11,15 +11,11 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { site } from "../src/lib/site.js";
-
-const rootDir = path.resolve(import.meta.dirname, "..");
+import { site } from "../src/lib/config.js";
+import { distDir, rootDir } from "../src/lib/paths.js";
 
 const args = process.argv.slice(2);
-const skipPurge = args.includes("--skip-purge");
-const skipIndexNow = args.includes("--skip-indexnow");
-const rootIndex = args.indexOf("--root");
-const siteRoot = path.resolve(rootDir, rootIndex === -1 ? "dist" : args[rootIndex + 1]);
+const sitemapFile = path.join(distDir, "sitemap.xml");
 
 // A KEY=VALUE file, nothing more: no interpolation, no export keyword. Values
 // already present in the environment win, so a one-off override works.
@@ -76,25 +72,25 @@ async function purgeCloudflare() {
 async function submitIndexNow() {
   const key = site.search.indexNowKey;
   if (!key) {
-    return { status: "skipped", detail: "search.indexNowKey is null in src/lib/site.js" };
+    return { status: "skipped", detail: "search.indexnow_key is empty in config.ini" };
   }
 
-  const sitemap = await readFile(path.join(siteRoot, "sitemap.xml"), "utf8");
+  const sitemap = await readFile(sitemapFile, "utf8");
   const urlList = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(([, loc]) =>
     loc.replace(/&amp;/g, "&").replace(/&apos;/g, "'").replace(/&quot;/g, '"')
   );
 
   if (urlList.length === 0) {
-    throw new Error(`No <loc> entries in ${path.relative(rootDir, siteRoot)}/sitemap.xml`);
+    throw new Error(`No <loc> entries in ${path.relative(rootDir, sitemapFile)}`);
   }
 
   const response = await fetch("https://api.indexnow.org/indexnow", {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=utf-8" },
     body: JSON.stringify({
-      host: new URL(site.url).host,
+      host: site.host,
       key,
-      keyLocation: new URL(`/${key}.txt`, site.url).href,
+      keyLocation: `${site.url}/${key}.txt`,
       urlList,
     }),
   });
@@ -107,8 +103,8 @@ async function submitIndexNow() {
   return { status: "done", detail: `${urlList.length} URL(s) submitted` };
 }
 
-async function run(name, skip, task) {
-  if (skip) {
+async function run(name, task) {
+  if (args.includes(`--skip-${name}`)) {
     console.log(`${name.padEnd(11)} skipped — --skip-${name} requested`);
     return true;
   }
@@ -124,9 +120,6 @@ async function run(name, skip, task) {
 }
 
 await loadEnvFile();
-const results = [
-  await run("purge", skipPurge, purgeCloudflare),
-  await run("indexnow", skipIndexNow, submitIndexNow),
-];
+const results = [await run("purge", purgeCloudflare), await run("indexnow", submitIndexNow)];
 
 if (results.includes(false)) process.exit(1);

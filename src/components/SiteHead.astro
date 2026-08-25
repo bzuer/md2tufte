@@ -1,5 +1,5 @@
 ---
-import { site } from "../lib/site.js";
+import { site } from "../lib/config.js";
 import { buildStructuredData } from "../lib/structured-data.js";
 
 const { metadata, stylesheet } = Astro.props;
@@ -35,14 +35,22 @@ const verification = Object.entries(site.search.verification).filter(([, token])
 {site.icons.png.map((icon) => (
   <link rel="icon" href={icon.path} type="image/png" sizes={icon.sizes} />
 ))}
-<link rel="icon" href={site.icons.ico.path} type="image/x-icon" sizes={site.icons.ico.sizes} />
-<link rel="apple-touch-icon" href={site.icons.appleTouch.path} sizes={site.icons.appleTouch.sizes} />
+{site.icons.ico && (
+  <link rel="icon" href={site.icons.ico.path} type="image/x-icon" sizes={site.icons.ico.sizes} />
+)}
+{site.icons.appleTouch && (
+  <link
+    rel="apple-touch-icon"
+    href={site.icons.appleTouch.path}
+    sizes={site.icons.appleTouch.sizes}
+  />
+)}
 <link rel="manifest" href="/site.webmanifest" />
 <link rel="sitemap" href="/sitemap.xml" type="application/xml" />
 
 <meta property="og:type" content={metadata.type} />
 <meta property="og:site_name" content={site.name} />
-<meta property="og:locale" content={site.locale} />
+{site.locale && <meta property="og:locale" content={site.locale} />}
 <meta property="og:url" content={metadata.canonical} />
 <meta property="og:title" content={metadata.title} />
 <meta property="og:description" content={metadata.description} />
@@ -64,7 +72,7 @@ const verification = Object.entries(site.search.verification).filter(([, token])
 <meta name="twitter:image" content={metadata.image.url} />
 <meta name="twitter:image:alt" content={metadata.image.alt} />
 
-{/* Console ownership tokens, emitted only when set in src/lib/site.js. */}
+{/* Console ownership tokens, emitted only when set in config.ini. */}
 {verification.map(([name, token]) => <meta name={name} content={token} />)}
 
 <link rel="stylesheet" href={stylesheet} />

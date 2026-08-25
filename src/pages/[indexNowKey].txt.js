@@ -2,12 +2,11 @@
 // its contents with the key in the submission, which is how they know the request
 // came from someone who controls this host. The key is public by design.
 //
-// Emitted from src/lib/site.js so the key exists in exactly one place; setting
-// search.indexNowKey to null removes the file and skips submission in
-// scripts/publish.sh. Static routes win over dynamic ones, so /robots.txt and
-// /sitemap.xml are unaffected.
+// Emptying search.indexnow_key in config.ini removes the file and skips the
+// submission in scripts/publish.js. Static routes win over dynamic ones, so
+// /robots.txt and /sitemap.xml are unaffected.
 
-import { site } from "../lib/site.js";
+import { site } from "../lib/config.js";
 
 export const prerender = true;
 

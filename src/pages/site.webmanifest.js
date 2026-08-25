@@ -1,7 +1,7 @@
 // Generated so the install name, theme colour and icon set cannot drift from
-// src/lib/site.js. Referenced from <head> by src/components/SiteHead.astro.
+// config.ini. Referenced from <head> by src/components/SiteHead.astro.
 
-import { site } from "../lib/site.js";
+import { site } from "../lib/config.js";
 
 export const prerender = true;
 
