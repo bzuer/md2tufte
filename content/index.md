@@ -7,7 +7,7 @@ keywords: [Bruno Cruz, social anthropology, Max Weber, sociology of religion, Mu
 <label for="fig-1" class="margin-toggle">&#8853;</label>
 <input type="checkbox" id="fig-1" class="margin-toggle"/>
 <span class="marginnote">
-<img src="/static/img/imga.png" alt="Detailed description"/>
+<img src="/static/img/imga.png" alt="Architectural survey drawing of a house plan"/>
 </span>
 
 ## About
@@ -20,6 +20,6 @@ Project Lead of the [Ethnos](https://ethnos.app), which seeks to gather a large 
 
 Current Projects include the Portuguese translation of Max Weber’s "Gesammelte Aufsätze zur Religionssoziologie" (Collected Essays in the Sociology of Religion).
 
-<p style="text-align: center;"> [Github](https://github.com/bzuer) ▭ [Orcid](https://orcid.org/0000-0001-8652-2333) ▭ [PPGAS](https://ppgas.museunacional.ufrj.br/) </p>
+<p style="text-align: center;"><a href="https://github.com/bzuer">Github</a> ▭ <a href="https://orcid.org/0000-0001-8652-2333">Orcid</a> ▭ <a href="https://ppgas.museunacional.ufrj.br/">PPGAS</a></p>
 
-<p style="text-align: center;"> [Instagram](https://www.instagram.com/bzuer_) ▭ [X](https://x.com/bzuer_) ▭ [Mail](mailto:cunha@cruz.rio.br) </p>
+<p style="text-align: center;"><a href="https://www.instagram.com/bzuer_">Instagram</a> ▭ <a href="https://x.com/bzuer_">X</a> ▭ <a href="mailto:cunha@cruz.rio.br">Mail</a></p>
