@@ -82,7 +82,9 @@ export const site = {
   },
   server: {
     port: Number(serverIni.port) || 1213,
-    nginxConf: serverIni.nginx_conf || "/etc/nginx/conf.d/md2tufte.conf",
+    // Named after the project directory, so a second site generated from this
+    // template defaults to its own file instead of overwriting the first one.
+    nginxConf: serverIni.nginx_conf || `/etc/nginx/conf.d/${path.basename(rootDir)}.conf`,
   },
 };
 

@@ -88,6 +88,23 @@ reload_nginx() {
   fi
 }
 
+# Another site on this server must not already hold the port. Two default_server
+# blocks on one address stop Nginx from loading at all, which would take down
+# every site it serves, not just this one.
+check_port() {
+  local taken
+  taken="$(sudo grep -lE "^[[:space:]]*listen[[:space:]]+(.*:)?${PORT}\b" \
+    /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* 2>/dev/null |
+    grep -vFx "$NGINX_CONF" || true)"
+
+  if [[ -n "$taken" ]]; then
+    echo "Port ${PORT} is already used by:"
+    echo "$taken" | sed 's/^/  /'
+    echo "Change [server] port in config.ini, or remove that config."
+    exit 1
+  fi
+}
+
 run_nginx() {
   if [[ "$print" -eq 1 ]]; then
     node scripts/nginx.js
@@ -97,14 +114,36 @@ run_nginx() {
   require nginx sudo
   [[ -d "$DIST" ]] || { echo "Site root not found: ${DIST} — run '$(basename "$0") build' first."; exit 1; }
 
-  local rendered
+  check_port
+
+  local rendered backup=""
   rendered="$(mktemp)"
   node scripts/nginx.js >"$rendered"
+
+  if sudo test -f "$NGINX_CONF"; then
+    backup="$(mktemp)"
+    sudo cp "$NGINX_CONF" "$backup"
+  fi
+
   sudo install -m 644 "$rendered" "$NGINX_CONF"
   rm -f "$rendered"
-
   grant_access
-  sudo nginx -t
+
+  # A rejected config must not stay on disk: the next reload of any site on this
+  # server would fail with it.
+  if ! sudo nginx -t; then
+    if [[ -n "$backup" ]]; then
+      sudo install -m 644 "$backup" "$NGINX_CONF"
+      rm -f "$backup"
+      echo "Nginx rejected the generated config; the previous one was restored."
+    else
+      sudo rm -f "$NGINX_CONF"
+      echo "Nginx rejected the generated config; it was not installed."
+    fi
+    exit 1
+  fi
+
+  [[ -n "$backup" ]] && rm -f "$backup"
   reload_nginx
   echo "Nginx serving ${DIST} on 127.0.0.1:${PORT} (${NGINX_CONF})."
 }
