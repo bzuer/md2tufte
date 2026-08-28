@@ -12,6 +12,13 @@ const values = {
   DIST: distDir,
 };
 
+// Single-quoted, because the caller eval's this. JSON quoting is not shell
+// quoting: a $, a backtick or a backslash in config.ini would survive it and run
+// as code. Inside single quotes nothing is special but the quote itself.
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
 for (const [name, value] of Object.entries(values)) {
-  console.log(`${name}=${JSON.stringify(String(value))}`);
+  console.log(`${name}=${shellQuote(value)}`);
 }

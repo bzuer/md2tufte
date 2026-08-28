@@ -53,7 +53,23 @@ export function contentImages() {
         const [url] = (request.url ?? "").split("?");
         if (!url.startsWith(prefix)) return next();
 
-        const filePath = path.resolve(imageDir, decodeURIComponent(url.slice(prefix.length)));
+        // A malformed escape (a bare "%") makes decodeURIComponent throw, which in a
+        // middleware is an unhandled rejection. Nothing downstream can serve such a
+        // URL either, so it is answered here with the 404 Nginx gives in production.
+        // (Astro's own dev middleware decodes first and answers 500 before this runs;
+        // that is upstream, and dev-only.)
+        let requested;
+        try {
+          requested = decodeURIComponent(url.slice(prefix.length));
+        } catch {
+          response.statusCode = 404;
+          return response.end();
+        }
+
+        // Confined to content/img/: a decoded "../" or a NUL must not reach the disk.
+        if (requested.includes("\0")) return next();
+
+        const filePath = path.resolve(imageDir, requested);
         if (!filePath.startsWith(`${imageDir}${path.sep}`) || !mimeType(filePath)) return next();
 
         try {
