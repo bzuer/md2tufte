@@ -17,11 +17,27 @@ const SECURITY_HEADERS = [
   "referrer-policy",
   "x-frame-options",
   "permissions-policy",
+  "content-security-policy",
 ];
+
+// What a harvester greps for. The build percent-encodes every mailto:/tel: address
+// and breaks a written-out one with a hidden decoy, so neither form may survive to
+// the published page — this is the assertion that keeps that true.
+const CLEAR_TEXT_CONTACT = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+|href="(mailto|tel):[^"%]/;
+
+// site.url goes into patterns as a literal: unescaped, its dots match anything.
+function quote(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 const args = process.argv.slice(2);
 const originIndex = args.indexOf("--origin");
+if (originIndex !== -1 && !args[originIndex + 1]) {
+  console.error("--origin needs a URL, e.g. --origin http://127.0.0.1:1213");
+  process.exit(1);
+}
 const origin = (originIndex === -1 ? site.url : args[originIndex + 1]).replace(/\/$/, "");
+const url = quote(site.url);
 
 // Whichever page the author happens to have written: the checks below are about
 // the contract every non-home page shares, not about one file.
@@ -35,12 +51,13 @@ const checks = [
     status: 200,
     headers: { "content-type": /^text\/html/ },
     body: [
-      new RegExp(`<link rel="canonical" href="${site.url}/">`),
+      new RegExp(`<link rel="canonical" href="${url}/">`),
       /<meta name="description" content=".+"/,
-      new RegExp(`<meta property="og:image" content="[^"]+${site.image.path}"`),
+      new RegExp(`<meta property="og:image" content="[^"]+${quote(site.image.path)}"`),
       /<meta name="twitter:card" content="summary_large_image">/,
       /<script type="application\/ld\+json">/,
     ],
+    absent: [CLEAR_TEXT_CONTACT],
   },
   ...(article
     ? [
@@ -49,9 +66,10 @@ const checks = [
           path: article,
           status: 200,
           body: [
-            new RegExp(`<link rel="canonical" href="${site.url}${article}">`),
+            new RegExp(`<link rel="canonical" href="${url}${quote(article)}">`),
             /<meta property="og:type" content="article">/,
           ],
+          absent: [CLEAR_TEXT_CONTACT],
         },
         { label: "trailing slash", path: `${article}/`, status: 301, location: article },
         { label: ".html suffix", path: `${article}.html`, status: 301, location: article },
@@ -64,20 +82,20 @@ const checks = [
     path: "/robots.txt",
     status: 200,
     headers: { "content-type": /^text\/plain/ },
-    body: [new RegExp(`^Sitemap: ${site.url}/sitemap\\.xml$`, "m")],
+    body: [new RegExp(`^Sitemap: ${url}/sitemap\\.xml$`, "m")],
   },
   {
     label: "sitemap.xml",
     path: "/sitemap.xml",
     status: 200,
     headers: { "content-type": /xml/ },
-    body: [/<urlset /, new RegExp(`<loc>${site.url}/</loc>`), /<lastmod>/],
+    body: [/<urlset /, new RegExp(`<loc>${url}/</loc>`), /<lastmod>/],
   },
   {
     label: "manifest",
     path: "/site.webmanifest",
     status: 200,
-    body: [/"icons"/, new RegExp(`"theme_color": "${site.themeColor.light}"`)],
+    body: [/"icons"/, new RegExp(`"theme_color": "${quote(site.themeColor.light)}"`)],
   },
   {
     label: "social card",
@@ -101,7 +119,7 @@ if (site.search.indexNowKey) {
     label: "indexnow key",
     path: `/${site.search.indexNowKey}.txt`,
     status: 200,
-    body: [new RegExp(`^${site.search.indexNowKey}$`, "m")],
+    body: [new RegExp(`^${quote(site.search.indexNowKey)}$`, "m")],
   });
 }
 
@@ -140,10 +158,14 @@ async function runCheck(check) {
     if (!value || !pattern.test(value)) problems.push(`${header}: ${value ?? "absent"}`);
   }
 
-  if (check.body?.length) {
+  if (check.body?.length || check.absent?.length) {
     const text = await response.text();
-    for (const pattern of check.body) {
+    for (const pattern of check.body ?? []) {
       if (!pattern.test(text)) problems.push(`body missing ${pattern}`);
+    }
+    for (const pattern of check.absent ?? []) {
+      const found = text.match(pattern);
+      if (found) problems.push(`body exposes ${JSON.stringify(found[0])}`);
     }
   }
 
