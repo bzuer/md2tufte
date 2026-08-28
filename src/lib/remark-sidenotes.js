@@ -1,5 +1,8 @@
 import { visit, SKIP } from "unist-util-visit";
 
+const OPENER = "^[";
+const MARGINNOTE = /^\s*\{:\s*\.marginnote\s*\}/;
+
 function stripWrappingParagraph(html) {
   const trimmed = html.trim();
   if (trimmed.startsWith("<p>") && trimmed.endsWith("</p>")) {
@@ -21,12 +24,70 @@ function escapeAttribute(value) {
   return escapeHtml(value).replace(/`/g, "&#96;");
 }
 
+// A sidenote is numbered by CSS, so its label carries no glyph; a margin note is
+// unnumbered and needs a visible ⊕ to open it on a narrow screen.
+function sidenote(id, content) {
+  return (
+    `<label for="${id}" class="margin-toggle sidenote-number"></label>` +
+    `<input type="checkbox" id="${id}" class="margin-toggle" />` +
+    `<span class="sidenote">${content}</span>`
+  );
+}
+
+function marginnote(id, content) {
+  return (
+    `<label for="${id}" class="margin-toggle">&#8853;</label>` +
+    `<input type="checkbox" id="${id}" class="margin-toggle" />` +
+    `<span class="marginnote">${content}</span>`
+  );
+}
+
+// The note runs from "^[" to the next "]", and remark has already split the
+// paragraph at every inline construct in between — a link, emphasis, code or an
+// autolinked address each end one text node and start another. So the note is
+// collected across siblings rather than inside a single one, which is what makes
+// ^[a note with *emphasis*] a sidenote instead of literal text on the page.
+function collectNote(children, start, offset) {
+  const content = [];
+
+  for (let index = start; index < children.length; index += 1) {
+    const child = children[index];
+
+    if (child.type !== "text") {
+      content.push(child);
+      continue;
+    }
+
+    const value = index === start ? child.value.slice(offset) : child.value;
+    const close = value.indexOf("]");
+
+    if (close === -1) {
+      if (value) content.push({ type: "text", value });
+      continue;
+    }
+
+    if (close > 0) content.push({ type: "text", value: value.slice(0, close) });
+    return { content, end: index, rest: value.slice(close + 1) };
+  }
+
+  // Unterminated: leave the text exactly as the author wrote it.
+  return null;
+}
+
 export function remarkSidenotes(options = {}) {
   const renderInline = options.renderInline;
   const renderBlocks = options.renderBlocks;
   let counter = 0;
   let marginCounter = 0;
   const footnotes = new Map();
+
+  const render = (nodes) =>
+    renderBlocks ? stripWrappingParagraph(renderBlocks(nodes)) : "";
+
+  // mdast-util-to-hast separates root children with newlines. Wrapping an inline
+  // run in a paragraph and stripping the paragraph back off keeps the note's text
+  // exactly as the author spaced it.
+  const renderNote = (nodes) => render([{ type: "paragraph", children: nodes }]);
 
   return (tree) => {
     visit(tree, "footnoteDefinition", (node, index, parent) => {
@@ -36,52 +97,40 @@ export function remarkSidenotes(options = {}) {
 
       const key = (node.identifier || "").toLowerCase();
       if (key && renderBlocks) {
-        const html = renderBlocks(node.children || []);
-        footnotes.set(key, stripWrappingParagraph(html));
+        footnotes.set(key, render(node.children || []));
       }
 
       parent.children.splice(index, 1);
       return [SKIP, index];
     });
 
-    visit(tree, "text", (node, index, parent) => {
-      if (!parent || typeof index !== "number") {
+    visit(tree, (node) => {
+      if (!Array.isArray(node.children)) {
         return;
       }
 
-      const value = node.value;
-      const pattern = /\^\[([\s\S]+?)\]/g;
-      let match;
-      let lastIndex = 0;
-      const nodes = [];
+      for (let index = 0; index < node.children.length; index += 1) {
+        const child = node.children[index];
+        if (child.type !== "text") continue;
 
-      while ((match = pattern.exec(value))) {
-        if (match.index > lastIndex) {
-          nodes.push({ type: "text", value: value.slice(lastIndex, match.index) });
-        }
+        const open = child.value.indexOf(OPENER);
+        if (open === -1) continue;
+
+        const note = collectNote(node.children, index, open + OPENER.length);
+        if (!note) continue;
 
         counter += 1;
-        const raw = match[1].trim();
-        const inner = renderInline ? renderInline(raw) : escapeHtml(raw);
-        const noteId = `sn-${counter}`;
-        const html =
-          `<label for="${noteId}" class="margin-toggle sidenote-number"></label>` +
-          `<input type="checkbox" id="${noteId}" class="margin-toggle" />` +
-          `<span class="sidenote">${inner}</span>`;
-        nodes.push({ type: "html", value: html });
-        lastIndex = pattern.lastIndex;
-      }
+        const before = child.value.slice(0, open);
+        const replacement = [];
+        if (before) replacement.push({ type: "text", value: before });
+        replacement.push({ type: "html", value: sidenote(`sn-${counter}`, renderNote(note.content)) });
+        if (note.rest) replacement.push({ type: "text", value: note.rest });
 
-      if (!nodes.length) {
-        return;
+        node.children.splice(index, note.end - index + 1, ...replacement);
+        // Land on the inserted note, so the text after it is scanned next and a
+        // second ^[…] on the same line is not missed.
+        index += before ? 1 : 0;
       }
-
-      if (lastIndex < value.length) {
-        nodes.push({ type: "text", value: value.slice(lastIndex) });
-      }
-
-      parent.children.splice(index, 1, ...nodes);
-      return index + nodes.length;
     });
 
     visit(tree, "image", (node, index, parent) => {
@@ -100,7 +149,9 @@ export function remarkSidenotes(options = {}) {
       return index + 1;
     });
 
-    visit(tree, "emphasis", (node, index, parent) => {
+    // *text*{:.marginnote} and [text](url){:.marginnote}: the trailing attribute
+    // block is a text sibling of the emphasis or link it applies to.
+    visit(tree, (node) => node.type === "emphasis" || node.type === "link", (node, index, parent) => {
       if (!parent || typeof index !== "number") {
         return;
       }
@@ -110,56 +161,15 @@ export function remarkSidenotes(options = {}) {
         return;
       }
 
-      const match = next.value.match(/^\s*\{:\s*\.marginnote\s*\}/);
+      const match = next.value.match(MARGINNOTE);
       if (!match) {
         return;
       }
 
-      const rendered = renderBlocks ? renderBlocks([node]) : "";
-      const content = stripWrappingParagraph(rendered);
       marginCounter += 1;
-      const noteId = `mn-${marginCounter}`;
-      const html =
-        `<label for="${noteId}" class="margin-toggle">&#8853;</label>` +
-        `<input type="checkbox" id="${noteId}" class="margin-toggle" />` +
-        `<span class="marginnote">${content}</span>`;
-
+      const html = marginnote(`mn-${marginCounter}`, renderNote([node]));
       parent.children.splice(index, 1, { type: "html", value: html });
-      const rest = next.value.slice(match[0].length);
-      if (rest.trim().length === 0) {
-        parent.children.splice(index + 1, 1);
-      } else {
-        next.value = rest;
-      }
 
-      return index + 1;
-    });
-
-    visit(tree, "link", (node, index, parent) => {
-      if (!parent || typeof index !== "number") {
-        return;
-      }
-
-      const next = parent.children[index + 1];
-      if (!next || next.type !== "text") {
-        return;
-      }
-
-      const match = next.value.match(/^\s*\{:\s*\.marginnote\s*\}/);
-      if (!match) {
-        return;
-      }
-
-      const rendered = renderBlocks ? renderBlocks([node]) : "";
-      const content = stripWrappingParagraph(rendered);
-      marginCounter += 1;
-      const noteId = `mn-${marginCounter}`;
-      const html =
-        `<label for="${noteId}" class="margin-toggle">&#8853;</label>` +
-        `<input type="checkbox" id="${noteId}" class="margin-toggle" />` +
-        `<span class="marginnote">${content}</span>`;
-
-      parent.children.splice(index, 1, { type: "html", value: html });
       const rest = next.value.slice(match[0].length);
       if (rest.trim().length === 0) {
         parent.children.splice(index + 1, 1);
@@ -178,13 +188,8 @@ export function remarkSidenotes(options = {}) {
       const key = (node.identifier || "").toLowerCase();
       const note = footnotes.get(key) || escapeHtml(key || "");
       counter += 1;
-      const noteId = `sn-${counter}`;
-      const html =
-        `<label for="${noteId}" class="margin-toggle sidenote-number"></label>` +
-        `<input type="checkbox" id="${noteId}" class="margin-toggle" />` +
-        `<span class="sidenote">${note}</span>`;
 
-      parent.children.splice(index, 1, { type: "html", value: html });
+      parent.children.splice(index, 1, { type: "html", value: sidenote(`sn-${counter}`, note) });
       return index + 1;
     });
   };
