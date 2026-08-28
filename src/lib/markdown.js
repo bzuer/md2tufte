@@ -7,6 +7,7 @@ import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import { remarkSidenotes } from "./remark-sidenotes.js";
+import { rehypeContacts } from "./rehype-contacts.js";
 
 function stripWrappingParagraph(html) {
   const trimmed = html.trim();
@@ -57,6 +58,9 @@ export async function renderMarkdown(markdown) {
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeKatex)
+    // After rehypeRaw, so the anchors the author wrote as raw HTML — and the notes
+    // the sidenote plugin rendered to HTML strings — are real elements by now.
+    .use(rehypeContacts)
     .use(rehypeStringify);
 
   const result = await processor.process(markdown);

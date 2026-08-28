@@ -18,6 +18,10 @@ const INLINE_PATTERNS = [
   [/<[^>]+>/g, ""], // inline HTML
   [/[*_]{1,3}([^*_]+)[*_]{1,3}/g, "$1"], // emphasis
   [/&[#\w]+;/g, " "], // entities
+  // A contact address is obfuscated in the page body (src/lib/rehype-contacts.js);
+  // a meta tag cannot be, since every reader of one decodes it. So it is dropped
+  // from a derived description rather than published there in clear text.
+  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+/g, ""],
 ];
 
 function stripInline(value) {

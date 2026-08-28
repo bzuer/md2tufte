@@ -500,6 +500,13 @@ span.newthought {
     font-size: 1.2em;
 }
 
+/* The decoy inside an obfuscated contact address (src/lib/rehype-contacts.js).
+   The UA stylesheet already hides [hidden]; this restates it as !important so no
+   later rule can reveal a fragment that would show the reader a wrong address. */
+[hidden] {
+    display: none !important;
+}
+
 input.margin-toggle {
     display: none;
 }

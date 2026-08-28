@@ -154,6 +154,22 @@ Images should carry information, not mood. A link is an invitation to verify or 
 
 [PPGAS](https://ppgas.mn.ufrj.br)
 
+**Contact Links**
+
+Write an address the way you would say it. The build publishes it obfuscated: the link's address is percent-encoded, and an address shown in the text is broken by a hidden decoy, so a harvester reading the page collects a mailbox that cannot receive mail. The link still works, the address still copies, and a screen reader still reads the real one. There is nothing to remember and nothing to encode by hand.
+
+**Markdown Syntax**
+
+```md
+[Mail](mailto:someone@example.com)
+
+Or simply someone@example.com in a sentence.
+```
+
+**Rendered Example**
+
+[Mail](mailto:someone@example.com) — or simply someone@example.com in a sentence. Both are safe to write; view the page source to see what a scraper gets instead.
+
 **Images**
 
 **Markdown Syntax**

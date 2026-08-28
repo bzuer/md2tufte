@@ -1,7 +1,8 @@
 // Schema.org graph for the page head. Nodes are @id-linked so the Person and
 // WebSite are declared once and referenced from every page.
-// The author's email is deliberately absent: it is obfuscated in the page body
-// and repeating it here in clear text would hand it straight to scrapers.
+// No email or telephone node: the page body publishes contact details obfuscated
+// (src/lib/rehype-contacts.js), and a JSON-LD block is the first thing a harvester
+// reads, so repeating them here would undo that.
 
 import { site, absoluteUrl } from "./config.js";
 
