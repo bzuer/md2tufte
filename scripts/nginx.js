@@ -13,6 +13,23 @@ const { port, nginxConf } = site.server;
 // config file keeps it from colliding with another site on the same server.
 const cacheVariable = `${path.basename(nginxConf, ".conf").replace(/[^a-z0-9]/gi, "_")}_cache`;
 
+// The site ships no client-side JavaScript, so script-src can be closed outright;
+// a JSON-LD block is data, not a script, and is not covered by it. Inline styles
+// are unavoidable: KaTeX sizes every glyph with a style attribute, and the author
+// writes them in Markdown. Images are allowed off-site so a linked illustration
+// still loads. HSTS stays with Cloudflare, which is what terminates TLS.
+const CSP = [
+  "default-src 'none'",
+  "script-src 'none'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: https:",
+  "font-src 'self'",
+  "manifest-src 'self'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'self'",
+].join("; ");
+
 const wwwRedirect = site.host.includes(".") && !site.host.startsWith("www.")
   ? `
 # www is not canonical: fold it onto the apex host so the two are never indexed
@@ -46,12 +63,18 @@ server {
 
   # Path-only Location headers, so redirects keep the scheme the edge terminated on.
   absolute_redirect off;
+  # Collapses //host into /host, so a redirect built from the path cannot become
+  # the protocol-relative //host that a browser reads as another origin.
+  merge_slashes on;
+  # The version number tells an attacker which advisories to try.
+  server_tokens off;
 
   add_header Cache-Control $${cacheVariable} always;
   add_header X-Content-Type-Options "nosniff" always;
   add_header Referrer-Policy "strict-origin-when-cross-origin" always;
   add_header X-Frame-Options "SAMEORIGIN" always;
   add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+  add_header Content-Security-Policy "${CSP}" always;
 
   gzip on;
   gzip_vary on;
@@ -65,17 +88,28 @@ server {
     return 301 /;
   }
 
-  location ~ ^(/.+)\\.html$ {
+  # The captured path may not contain a backslash (\\x5c, written as a code point so
+  # it survives both this file and Nginx's own unescaping). Browsers follow the
+  # WHATWG URL rules, where a backslash counts as a slash, so a Location of
+  # /\\host/page resolves to https://host/page — an open redirect off this site. No
+  # page here has one in its name, so such a request falls through to the 404 below.
+  location ~ "^(/[^\\x5c]+)\\.html$" {
     return 301 $1$is_args$args;
   }
 
-  location ~ ^(/.+)/$ {
+  location ~ "^(/[^\\x5c]+)/$" {
     return 301 $1$is_args$args;
   }
 
   # Reachable only through error_page, never as a URL of its own.
   location = /404.html {
     internal;
+  }
+
+  # Nothing published here is a dotfile. One that reaches dist/ — copied out of
+  # public/ by accident — is not served. /.well-known stays reachable.
+  location ~ "^/\\.(?!well-known/)" {
+    return 404;
   }
 
   # This Nginx build ships no .webmanifest entry in mime.types, so the type is set
