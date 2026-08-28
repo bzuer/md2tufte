@@ -130,7 +130,9 @@ noindex: false
 
 Canonical URLs carry **no trailing slash** (`/md2tufte`). Nginx redirects
 `/md2tufte/`, `/md2tufte.html`, `/index.html` and the `www` host onto that form,
-and returns a real 404 for unknown addresses.
+and returns a real 404 for unknown addresses. The generated config also sets the
+security headers — including a `default-src 'none'` Content-Security-Policy, which
+the site can afford because it ships no client-side JavaScript.
 
 ## Markdown Support
 
@@ -145,6 +147,22 @@ and returns a real 404 for unknown addresses.
 
 The complete guide, with rendered examples, is
 [`content/md2tufte.md`](content/md2tufte.md).
+
+## Contact Details
+
+Write an address the way you would say it — `[Mail](mailto:you@example.com)`, or
+just `you@example.com` in a sentence — and the build publishes it obfuscated. The
+link's address is percent-encoded, so it is not a string a harvester can grep, and
+an address shown in the text is broken by a hidden decoy, so a scraper reading the
+page collects a mailbox that cannot receive mail. The link still works, the address
+still copies, and a screen reader still reads the real one. Nothing to remember,
+and no JavaScript.
+
+It stops harvesters that read HTML, which is what crawls a site this size; it does
+not stop one driving a real browser. Addresses are also kept out of the `<head>`
+and the JSON-LD, where obfuscation would be pointless — every reader of a meta tag
+decodes it. `./scripts/manage.sh verify` fails if a clear-text address ever reaches
+a published page.
 
 ## Project Structure
 

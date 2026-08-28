@@ -54,6 +54,8 @@ change that forces the author to edit anything in `src/`, `scripts/` or
   - `markdown.js` — `renderMarkdown()`, the unified processor entry point.
   - `remark-sidenotes.js` — custom remark plugin implementing the sidenote/margin-note
     transforms.
+  - `rehype-contacts.js` — obfuscates email addresses and telephone links against
+    harvesting.
   - `content-images.js` — Vite plugin serving/copying `content/img/` as `/static/img/`.
   - `content.js` — the only place mapping `content/*.md` to routes.
   - `frontmatter.js` — optional YAML-subset frontmatter parser (no dependencies).
@@ -100,12 +102,15 @@ git-ignored `.env.deploy`.
 
 `renderMarkdown(markdown)` runs a `unified` chain: `remark-parse` → `remark-gfm` →
 `remark-math` → `remarkSidenotes` → `remark-rehype` (`allowDangerousHtml`) →
-`rehype-raw` → `rehype-katex` → `rehype-stringify`.
+`rehype-raw` → `rehype-katex` → `rehypeContacts` → `rehype-stringify`.
 
 `remarkSidenotes` is given two helper renderers (`renderInline`, `renderBlocks`) so it
 can turn note content into HTML before rehype runs. It handles:
 
 - **Inline sidenotes**: `Main text^[This becomes a sidenote]` → numbered `.sidenote`.
+  The note is collected across sibling nodes, not inside one, because remark has
+  already split the paragraph at every link, emphasis, code span or autolinked
+  address in it — so `^[a note with *emphasis*]` is a note, not literal text.
 - **Footnotes as sidenotes**: `Main text[^id]` + `[^id]: note text` → the definition is
   captured, removed from the flow, and rendered in the margin at the reference site.
 - **Image-title margin notes**: `![Alt](path "Caption")` → `<figure><img></figure>` plus
@@ -120,6 +125,26 @@ Math is KaTeX: inline `$E = mc^2$`, block `$$ ... $$`. Raw HTML in Markdown is a
 `README.md` / `content/md2tufte.md`. Note that Markdown inside a block-level HTML
 element is *not* parsed — write links there as `<a href>`, not `[text](url)`.
 
+`rehypeContacts` runs last, after `rehype-raw`, so it sees the anchors the author
+wrote as raw HTML and the notes `remarkSidenotes` rendered to HTML strings as real
+elements. **Contact details are written plainly in Markdown and published
+obfuscated** — the author never encodes an address by hand:
+
+- a `mailto:` or `tel:` href is percent-encoded (`mailto:%63%75%6e…`), so the
+  address is not a literal string in the markup a harvester greps. Only the address
+  is encoded; a `?subject=` query keeps its separators, or it would fold into the
+  mailbox name. An href that already carries `%XX` escapes is left alone.
+- an address written into the visible text is split around a `<span hidden>` decoy,
+  so a scraper reading the DOM text harvests a mailbox that cannot receive mail —
+  the decoy leaves a dot against the `@`. A reader sees, copies and hears the real
+  one: `display:none` content is in neither the selection nor the accessibility
+  tree. `remark-gfm` autolinks a bare address first, so both halves apply to it.
+
+This defeats harvesters that read HTML, which is what crawls a site this size. It
+does not defeat one driving a real browser engine, and without JavaScript nothing
+can. `scripts/verify.js` asserts over HTTP that no clear-text address survives to a
+published page, which is what keeps the property from quietly regressing.
+
 The site ships no client-side JavaScript: the margin-note toggles are CSS checkboxes.
 Do not reintroduce a script tag without a reason a reader would feel.
 
@@ -132,6 +157,12 @@ boundary. Optional frontmatter overrides any of it — `title`, `description`,
 `keywords`, `image`, `imageAlt`, `date`, `noindex` — parsed by `src/lib/frontmatter.js`,
 a small YAML subset (scalars, quoted scalars, booleans, inline and block lists). A file
 without a frontmatter block, or with an unterminated one, is treated as pure Markdown.
+
+An email address is stripped from a *derived* title or description along with the
+other syntax that must not leak into a meta tag. A meta tag cannot be obfuscated —
+every reader of one decodes it — so the address is dropped rather than published
+there in clear text. The JSON-LD graph carries no `email` or `telephone` node for
+the same reason.
 
 **Canonical URL form is without a trailing slash** (`/md2tufte`). This is enforced in
 three places that must stay consistent: `trailingSlash: "never"` and
@@ -234,8 +265,10 @@ way, answering 500 from a path that no longer existed after the repo was renamed
 - `scripts/verify.js` asserts over HTTP what a build can only imply: canonical tag,
   description, `og:image`, Twitter card and JSON-LD on the home page; the 301 forms; a
   real 404 on an unknown URL; `robots.txt`, `sitemap.xml`, the manifest, every icon, the
-  social card and the IndexNow key file; and the security and cache headers. It probes
-  whichever page the author happens to have written — never a hardcoded slug —
+  social card and the IndexNow key file; the security and cache headers, CSP included;
+  and that **no clear-text contact address survives to a page** — an unencoded
+  `mailto:`/`tel:` href, or an address written out in the markup, fails the run. It
+  probes whichever page the author happens to have written — never a hardcoded slug —
   and `--origin <url>` points it at any origin, which is how `deploy` checks the local
   server and the public site with the same code.
 
@@ -274,12 +307,30 @@ The generated Nginx config is part of the site's correctness, not just its plumb
 - 301s fold `/page/`, `/page.html`, `/index.html` and the `www` host onto the canonical
   form. `absolute_redirect off` keeps `Location` path-relative so redirects survive TLS
   terminating upstream at Cloudflare.
+- A redirect must never be able to leave the site. `//host/page.html` is folded to
+  `/host/page.html` by `merge_slashes`, but a **backslash** is not: browsers follow
+  the WHATWG URL rules, where `\` counts as `/`, so a `Location` of `/\host/page`
+  resolves to `https://host/page`. Both redirect patterns therefore exclude `\x5c`
+  (written as a code point so it survives Nginx's own unescaping), and such a
+  request falls through to the 404. Probe it before changing either pattern:
+  `curl -sI --path-as-is "$ORIGIN/%5cevil.example/x.html"` must not answer 301.
 - Cache lifetimes come from a `map` keyed on `$uri`, so the server block carries a
   single `add_header` — an `add_header` inside a `location` would silently drop the
   inherited security headers. The map variable is named after the config file to avoid
   colliding with another site on the same server.
-- HSTS and any CSP are Cloudflare's responsibility; the origin sets
-  `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy`.
+- HSTS belongs to Cloudflare, which is what terminates TLS. Everything else is the
+  origin's, because the origin is what knows the pages: `X-Content-Type-Options`,
+  `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` and a
+  **Content-Security-Policy** of `default-src 'none'` with `script-src 'none'` — the
+  no-JavaScript rule above, made enforceable by the browser. A JSON-LD block is a
+  data block, not a script, and is not covered by it. `style-src` must keep
+  `'unsafe-inline'`: KaTeX sizes every glyph with a `style` attribute, and the
+  author writes them in Markdown. `img-src` allows `https:` so a linked
+  illustration still loads; an embed from another origin (an iframe, a web font,
+  a script) is blocked and needs the policy widened first.
+- `server_tokens off` keeps the version out of the `Server` header, and a dotfile
+  in the site root — one copied out of `public/` by accident — answers 404 rather
+  than being served. `/.well-known/` stays reachable.
 - This Nginx build ships no `.webmanifest` entry in `mime.types`, so
   `location = /site.webmanifest` sets `default_type`. That block declares no
   `add_header` for the reason above.
@@ -308,6 +359,10 @@ Run `npm run build` before publishing to validate the static output.
 - Avoid `TODO`/`FIXME`/`HACK` markers and commented-out code; keep only essential
   comments — those that explain *why*, not *what*.
 - Log output should be concise and must not expose sensitive information.
+- `scripts/config.js` is `eval`'d by `manage.sh`, so it emits **shell**-quoted values.
+  JSON quoting is not shell quoting: a `$`, a backtick or a backslash in `config.ini`
+  survives it and runs as code. Anything else that crosses into the shell owes the
+  same care.
 - Preserve accessible HTML: keep the landmark structure and the skip link in
   `BaseLayout.astro`, and keep meaningful `alt` text on images.
 - `README.md` documents the project for a reader; `content/md2tufte.md` is the syntax
@@ -324,7 +379,11 @@ Run `npm run build` before publishing to validate the static output.
   or `./scripts/manage.sh verify --origin http://127.0.0.1:1213`.
 - To exercise the generated Nginx config without touching the installed one, render it
   with `./scripts/manage.sh nginx --print`, change the port, and run a throwaway
-  `nginx -p <prefix> -c <conf>` instance to verify against.
+  `nginx -p <prefix> -c <conf>` instance to verify against. This is the only way to
+  test the redirect and header rules, and the right place to re-probe the
+  open-redirect vectors after touching either `location ~` pattern. Reload retires
+  the old workers asynchronously — stop and start the instance, or a probe may still
+  be answered by the config you just replaced.
 - Otherwise validate with `npm run dev` (local review) and `npm run build`
   (production-like check). If you add unit tests later, document the command here and
   keep test files near their modules.
