@@ -2,8 +2,6 @@
 title: Bruno Cruz
 description: Journalist, Anthropologist, Max-Weberist. Gen-Z and Doc Student. Hier ist nichts. In you come!
 keywords: [Bruno Cesar Cunha Cruz, Bruno Cruz, social anthropology, Max Weber, sociology of religion, Museu Nacional, UFRJ, Ethnos, modern Western thought]
-image: /static/img/bruno_card.png
-imageAlt: Stylised Bruno's self-portrait as a wooden puppet with a moustache and bow tie against a colourful geometric background.
 date: 2026-08-24
 noindex: false
 ---
