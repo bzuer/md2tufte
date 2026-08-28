@@ -23,10 +23,10 @@
     "unist-util-visit": "^5.0.0"
   },
   "allowScripts": {
-    "sharp@0.34.5": true,
+    "sharp@0.35.4": true,
     "esbuild@0.28.1": true
   },
   "devDependencies": {
-    "sharp": "^0.34.5"
+    "sharp": "^0.35.4"
   }
 }
