@@ -64,8 +64,13 @@
 }
 
 /* Tufte CSS styles */
+/* A percentage, so a reader's own default font size still scales the page.
+   The sidenote counter is reset here rather than on body, where KaTeX's
+   stylesheet sets counter-reset for its own counters and, loading later,
+   replaces this one; each note would then count from 1 in its own paragraph. */
 html {
-    font-size: 14px;
+    font-size: 87.5%;
+    counter-reset: sidenote-counter;
 }
 
 :focus-visible {
@@ -124,7 +129,9 @@ body {
     background-color: var(--background);
     color: var(--text);
     max-width: 1400px;
-    counter-reset: sidenote-counter;
+    /* A URL or a long word may break rather than push the page sideways on a
+       narrow screen. Unlike "anywhere", this leaves table columns' widths alone. */
+    overflow-wrap: break-word;
 }
 
 h1 {
@@ -254,6 +261,16 @@ table thead td {
     text-align: center;
 }
 
+/* A column aligned in Markdown (:--, :-:, --:) carries align on every cell; the
+   centring above would otherwise override it on the header alone. */
+table thead th[align="left"] {
+    text-align: left;
+}
+
+table thead th[align="right"] {
+    text-align: right;
+}
+
 table tbody td {
     padding: 0.4rem 0.6rem 0.4rem 0;
     vertical-align: top;
@@ -267,7 +284,9 @@ table tbody tr:hover td {
     background-color: var(--row-hover);
 }
 
-table td:hover,
+/* Specific enough to beat the row rule above, which otherwise also paints the
+   cell under the pointer and hides this stronger tint. */
+table tbody tr:hover td:hover,
 table th:hover {
     background-color: var(--cell-hover);
 }
@@ -298,10 +317,18 @@ p + p.subtitle {
     font-size: 1.05em;
 }
 
+/* Display math sits outside any paragraph, so it takes the paragraph's size and
+   column explicitly; otherwise it is set smaller than the text and centred across
+   the margin as well. */
 .katex-display {
     margin: 1.5rem 0;
+    font-size: 1.4rem;
     overflow-x: auto;
     overflow-y: hidden;
+}
+
+section > .katex-display {
+    width: 55%;
 }
 
 .katex-display > .katex {
@@ -360,7 +387,7 @@ section > dl,
 section > ol,
 section > ul {
     width: 50%;
-    -webkit-padding-start: 5%;
+    padding-inline-start: 5%;
 }
 
 dt:not(:first-child),
@@ -368,15 +395,16 @@ li:not(:first-child) {
     margin-top: 0.25rem;
 }
 
+/* flow-root, so a figure encloses its floated caption instead of letting the
+   caption ride up beside whatever follows the figure. */
 figure {
+    display: flow-root;
     padding: 0;
     border: 0;
     font-size: 100%;
     font: inherit;
     vertical-align: baseline;
     max-width: 55%;
-    -webkit-margin-start: 0;
-    -webkit-margin-end: 0;
     margin: 1.6rem 0 2.4rem 0;
 }
 
@@ -605,11 +633,17 @@ label.margin-toggle:not(.sidenote-number) {
         padding-right: 8%;
     }
 
+    /* At 3.2rem a single long word in a title is wider than a 320px screen. */
+    h1 {
+        font-size: 2.6rem;
+    }
+
     hr,
     section > p,
     section > footer,
     section > table,
-    section > .table-scroll > table {
+    section > .table-scroll > table,
+    section > .katex-display {
         width: 100%;
     }
 
