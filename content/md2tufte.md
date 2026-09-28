@@ -7,7 +7,7 @@ keywords: [md2tufte, Tufte CSS, Edward Tufte, Markdown, sidenotes, margin notes,
 
 This document is a comprehensive, self-contained demonstration of Markdown syntax and advanced styling techniques, showcasing how to create clear, effective, and visually sophisticated technical writing. Written entirely in Markdown with embedded HTML where necessary, it serves as both a reference and a live example: every feature the site supports appears below with the syntax that produces it and the result it renders.
 
-The guide emphasizes readability, logical structure, and thoughtful integration of text, code, images, and tables. It draws inspiration from Edward Tufte's principles of information design—prioritizing clarity, precision, efficiency, high data-ink ratio, and respect for the reader's intelligence—while adapting them to modern web-based Markdown rendering.
+The guide emphasizes readability, logical structure, and thoughtful integration of text, code, images, and tables. It draws inspiration from Edward Tufte's principles of information design–prioritizing clarity, precision, efficiency, high data-ink ratio, and respect for the reader's intelligence–while adapting them to modern web-based Markdown rendering.
 
 <label for="fig-tufte" class="margin-toggle">&#8853;</label>
 <input type="checkbox" id="fig-tufte" class="margin-toggle"/>
@@ -46,7 +46,7 @@ In Tufte's terms, headings should function like a map legend: concise, stable, a
 
 **Rendered Example**
 
-The page's title is its one H1 — it also becomes the page's `<title>` — so the example starts at H2.
+The page's title is its one H1 – it also becomes the page's `<title>` – so the example starts at H2.
 
 ## Heading Level 2 (H2)
 
@@ -89,6 +89,14 @@ Line with hard break.
 Next line after two spaces.
 
 Use emphasis purposefully: bold for strong claims, italics for terms or nuance, strikethrough for a visible correction. Overuse diminishes impact and creates visual noise.
+
+**Line Breaks and Hyphenation**
+
+Text is set flush left and ragged right, as Tufte CSS sets it, and the build and the stylesheet keep the ragged edge even without the author doing anything. Words of six letters or more hyphenate at the line's end, with at least three letters on each side of the break and never more than two hyphens in a row; the browser weighs a paragraph's line breaks together, so no line is left much shorter than its neighbours. Headings, links and code are never hyphenated. A number stays on the line of its unit – `48 GB`, `17.5 %`, `250 ms` – because the build turns the space between them into a no-break space.
+
+**Rendered Example**
+
+The Ethnos corpus currently holds 7,698,445 works and 7,786,681 publications, distilled from 22,678,823 fetched source records – 297 GB of cached responses – in a 48 GB database: a characteristically interdisciplinary, institutionally heterogeneous literature, reconstructed source by source.
 
 
 ## Lists: Unordered, Ordered, and Nested
@@ -158,7 +166,7 @@ A bare address such as https://edwardtufte.github.io/tufte-css/ becomes a link b
 
 A bare address such as https://edwardtufte.github.io/tufte-css/ becomes a link by itself.
 
-Make the link text say where it leads. "PPGAS" or "Tufte CSS" can be read out of context — in a screen reader's list of links, for instance; "click here" cannot.
+Make the link text say where it leads. "PPGAS" or "Tufte CSS" can be read out of context – in a screen reader's list of links, for instance; "click here" cannot.
 
 **Contact Links**
 
@@ -174,7 +182,7 @@ Or simply someone@example.com in a sentence.
 
 **Rendered Example**
 
-[Mail](mailto:someone@example.com) — or simply someone@example.com in a sentence. Both are safe to write; view the page source to see what a scraper gets instead.
+[Mail](mailto:someone@example.com) – or simply someone@example.com in a sentence. Both are safe to write; view the page source to see what a scraper gets instead.
 
 **Images**
 
@@ -193,7 +201,15 @@ Place images adjacent to the paragraph that references them, so the reader can c
 
 ![Architectural survey drawing of a house plan](/static/img/imga.png)
 
-Images live in `content/img/` and are referenced as `/static/img/…`. In dark mode an image is set on a light backdrop, so a drawing made with transparent areas keeps its ink visible.
+Images live in `content/img/` and are referenced as `/static/img/…`. In dark mode an image sits on the dark page as it is, so a drawing in dark ink on a transparent background, like the one above, fades there. To give dark mode its own version of an image, write it as a `<picture>`; the browser picks the source that matches the reader's setting:
+
+```html
+<picture>
+  <source srcset="/static/img/plan-dark.png" media="(prefers-color-scheme: dark)" />
+  <img src="/static/img/plan.png" alt="Architectural survey drawing of a house plan" />
+</picture>
+
+```
 
 **Captioned Images**
 
@@ -314,7 +330,7 @@ const message = "Hello, Markdown!";
 console.log(message);
 ```
 
-A line too long for the column scrolls inside its block rather than widening the page, and the block can be focused with Tab and scrolled with the arrow keys.
+A block whose longest line runs past about 76 characters is set full width by itself, taking in the margin, as the syntax example above shows. A line too long even for that scrolls inside its block rather than widening the page, and the block can be focused with Tab and scrolled with the arrow keys.
 
 
 ## Mathematics
@@ -359,7 +375,7 @@ Use tables when exact values matter. A clean table lets the reader compare witho
 
 **Markdown Syntax**
 
-Colons in the separator row align a column: `:--` left, `:-:` centre, `--:` right. Right-align numbers, so their digits line up.
+Colons in the separator row align a column, header included: `:--` left (the default), `:-:` centre, `--:` right. Right-align numbers, so their digits line up.
 
 ```md
 | Feature      | Purpose             | Notes                       |
@@ -379,6 +395,10 @@ Colons in the separator row align a column: `:--` left, `:-:` centre, `--:` righ
 | Code Blocks  | Technical examples  | Use language identifiers    |
 
 Align columns logically and keep entries brief. If a table needs interpretation, add a short sentence directly below it to guide the reader.
+
+**Table Width**
+
+A table's width follows from what it holds, counted in characters. If its widest row, unwrapped, fits the text column (about 72 characters of table type) or overruns it by no more than a fifth, the table stays in the column and a few cells wrap. A wider table is set full width, taking in the margin, so a long column of prose wraps into fewer, longer lines. Columns of numbers and short labels, up to 20 characters, are kept on one line, and the wrapping falls on the prose. The tables on this page are examples of both widths.
 
 **Tables Without Headers**
 
@@ -408,7 +428,7 @@ On a narrow screen a table wider than the column scrolls sideways inside its own
 
 **Tuftean Rationale: Functional Elements**
 
-Task lists serve as multifunctional elements—they provide both information (what needs to be done) and a mechanism for status tracking (what has been done). 
+Task lists serve as multifunctional elements–they provide both information (what needs to be done) and a mechanism for status tracking (what has been done). 
 
 This dual-purpose design increases the utility of the document.
 
@@ -607,7 +627,7 @@ build_the_image(n_points=20, n_lines=10, file_name="img-N.png")
 
 Accommodate wide datasets or many columns.
 
-Full-width tables should remain light on rules and heavy on useful numbers. A `<caption>` goes first inside the table and is shown beneath it.
+Full-width tables should remain light on rules and heavy on useful numbers. A Markdown table goes full width by itself when it needs to (see Table Width); `class="fullwidth"` sets it by hand on an HTML table. A `<caption>` goes first inside the table and is shown beneath it.
 
 **HTML Syntax**
 
@@ -879,7 +899,8 @@ noindex: false
 
 The same evidence should reach every reader, whatever the screen, the colour scheme, or the way they move through a page. None of what follows needs to be written by hand; it is how every page renders.
 
-- **Light and dark.** The page follows the reader's system setting. Every colour, including the highlight on a table row under the pointer, is chosen to keep text legible in both.
+- **Light and dark.** The page follows the reader's system setting. Every colour, including the highlight on a table row under the pointer, is chosen to keep text legible in both, at about the same contrast: dark text on white, and soft light text on a dark grey rather than white on black, which makes thin serif strokes glare.
+- **Measure.** A line of text holds about 68 characters, however wide the screen; the space the page does not need for text goes to the margin, to full-width tables and figures, and to the sides.
 - **Narrow screens.** Below 760 pixels, and when a reader zooms in far enough to reach that width, sidenotes and margin notes fold behind their number or ⊕, and wide tables and code scroll inside their own box.
 - **Keyboard.** Tab reaches every link, every note toggle on a narrow screen, and every box that scrolls; a "Skip to content" link comes first.
 - **Screen readers.** A note toggle is announced as "Sidenote" with its number, or as "Margin note". Math is read from MathML, and contact addresses read as written.
@@ -892,7 +913,7 @@ The author's part is what no build can supply: alt text that says what an image 
 
 **Tuftean Rationale: Structural Appropriateness**
 
-Matching the document pattern to the goal ensures that the layout supports the specific cognitive task—whether that is following a linear narrative (Essay) or performing a quick lookup (Reference Guide).
+Matching the document pattern to the goal ensures that the layout supports the specific cognitive task–whether that is following a linear narrative (Essay) or performing a quick lookup (Reference Guide).
 
 Choose the smallest structure that gets the job done. A good structure reduces searching and makes evidence easy to find.
 
@@ -914,7 +935,7 @@ Aim for high data density with low visual noise. Every line should carry meaning
 - Use lists and tables for structured data.
 - Provide exact code in fenced blocks.
 - Support claims with links or sidenotes.
-- Ensure every element—text, code, image, or table—serves the reader's understanding.
+- Ensure every element–text, code, image, or table–serves the reader's understanding.
 
 
 ## Starter Template
