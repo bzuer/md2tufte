@@ -259,10 +259,13 @@ of them.
 - **Tables are a panel.** `table` takes `--table-background`, one equal step of
   lightness off the page in each mode (#f5f5f5 / #242424, about 3.5–4 L*; the old
   #fafafa, 1.7 L*, was too faint to see). Rows are divided by hairlines of
-  `--background`, the row under the pointer returns to `--background` (inside
-  `@media (hover: hover)`, so a tap leaves nothing lit), and cells are padded off
-  the panel's edges. Two tones only: a third, for the cell under the pointer, made
-  tables harder to read. A header row with nothing in it is dropped by
+  `--background`, and cells are padded off the panel's edges. Under the pointer
+  (inside `@media (hover: hover)`, so a tap leaves nothing lit), its row and the
+  header of its column return to `--background`; over a header, its whole column
+  does. Lighting the whole column on every hover was measured and rejected: a
+  prose column took 77% of the table and hid the row. The column rules count
+  cells by `:nth-child` up to twelve columns, so a `colspan` throws them off. Two
+  tones only: a third, for the cell under the pointer, made tables harder to read. A header row with nothing in it is dropped by
   `rehype-accessibility.js`, or it would show as a bare stripe on the panel.
 - **Line breaking.** Text is ragged right, never justified (uneven word spacing
   reads worse than an uneven edge). `body` hyphenates (`hyphens: auto`, words of
