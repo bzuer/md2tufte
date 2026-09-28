@@ -25,7 +25,7 @@ Project Lead of the [Ethnos](https://ethnos.app), which seeks to gather a large 
 Current Projects include the Portuguese translation of Max Weber’s "Gesammelte Aufsätze zur Religionssoziologie" (Collected Essays in the Sociology of Religion).
 
 
-<div style="display: flex; justify-content: space-between; width: 55%; margin-top: 5rem; margin-bottom: 1.6rem;">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem 1.5rem; width: 55%; margin-top: 5rem; margin-bottom: 1.6rem;">
   <a href="mailto:cunha@cruz.rio.br" title="E-mail	" style="text-decoration: none;">Mail</a>
   <a href="https://linkedin.com/in/bzuer/" title="LinkedIn	" style="text-decoration: none;">LinkedIn</a>
   <a href="http://lattes.cnpq.br/2288647050998361/" title="Lattes	" style="text-decoration: none;">Lattes</a>
