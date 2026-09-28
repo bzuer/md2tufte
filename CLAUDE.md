@@ -70,6 +70,10 @@ change that forces the author to edit anything in `src/`, `scripts/` or
     transforms.
   - `rehype-contacts.js` — obfuscates email addresses and telephone links against
     harvesting.
+  - `rehype-typography.js` — binds a number to its unit with a no-break space.
+  - `rehype-widths.js` — sets each table and code block to the text column or full
+    width by its content, and keeps short table columns unbroken (see “Typography
+    and Layout”).
   - `rehype-accessibility.js` — the keyboard and screen-reader affordances the
     author never writes (see “Accessibility”).
   - `content-images.js` — Vite plugin serving/copying `content/img/` as `/static/img/`.
@@ -118,8 +122,8 @@ git-ignored `.env.deploy`.
 
 `renderMarkdown(markdown)` runs a `unified` chain: `remark-parse` → `remark-gfm` →
 `remark-math` → `remarkSidenotes` → `remark-rehype` (`allowDangerousHtml`) →
-`rehype-raw` → `rehype-katex` → `rehypeContacts` → `rehypeAccessibility` →
-`rehype-stringify`.
+`rehype-raw` → `rehype-katex` → `rehypeContacts` → `rehypeTypography` →
+`rehypeWidths` → `rehypeAccessibility` → `rehype-stringify`.
 
 `remarkSidenotes` is given two helper renderers (`renderInline`, `renderBlocks`) so it
 can turn note content into HTML before rehype runs. It handles:
@@ -200,8 +204,13 @@ In the stylesheet (`public/static/css/styles.dev.css`):
   tints are why: they were once light-mode literals, and in dark mode a hovered row
   turned near-white under light text (1.21:1). `--background` must match
   `theme_light` / `theme_dark` in `config.ini`.
-- In dark mode images sit on `--image-backdrop`: artwork with transparent areas
-  was drawn on white, and its ink disappears on the dark page otherwise.
+- Dark mode is `#d4d4d4` on `#1c1c1c` (11.5:1), about the contrast of light mode
+  (12.6:1). Near-white on near-black (`#ddd` on `#151515`, 13.3:1) made the thin
+  serif strokes glare; keep dark text contrast in the 10–12:1 band, not higher.
+- Images are shown as they are in dark mode. A light backdrop behind them was
+  tried and rejected: it boxed every image in a grey panel that broke the page.
+  Artwork in dark ink on transparency needs its own dark version, through
+  `<picture>` (the guide shows how).
 - On narrow screens `input.margin-toggle` is out of sight but still in the tab
   order (`display: none` shut keyboard users out of every note); its focus ring is
   drawn on the label through `label:has(+ input:focus-visible)`.
@@ -210,13 +219,50 @@ In the stylesheet (`public/static/css/styles.dev.css`):
   note 1.
 - `a:link { color: inherit }` outranks any single-class colour rule on a link; the
   skip link needs `.skip-link:link` to keep its reversed colours.
-- The root size is `87.5%`, not `14px`, so the reader's own font setting scales the
-  page; `overflow-wrap: break-word` on `body` lets URLs break instead of widening
-  it.
+- The root size is a percentage, not px, so the reader's own font setting scales
+  the page; `overflow-wrap: break-word` on `body` lets URLs break instead of
+  widening it.
 
 The author's part is what no build can supply: alt text that describes the image,
 headings in order, link text that names its destination, and a unique `id` on each
 hand-written toggle. `content/md2tufte.md` demonstrates each.
+
+## Typography and Layout
+
+The page follows Tufte CSS's grid — a text column of 55% of the section, a margin
+for notes, and a full width of 90% — with the values below chosen by measurement,
+not by eye. Re-measure (characters per line, gaps, raggedness) after changing any
+of them.
+
+- **Measure.** `body` is capped at `80rem`, which puts about 68 characters of body
+  type on a line (45–75 is the readable range). The cap was `1400px`, which let a
+  wide screen run lines to 87 characters. Being in rem, it grows with the type.
+- **Size.** The root is `93.75%` (15px, Tufte's own) on wide screens and `87.5%`
+  (14px) below 760px, where the column is narrow. Body text is `1.4rem` on a
+  `2rem` line.
+- **Rhythm.** Paragraphs and lists are `1.4rem` apart (0.7 of a line). Space above
+  a heading grows with its rank — `h2` 4.2rem, `h3` 2.8rem, `h4` 2.1rem — and the
+  space below it is the paragraph gap, so a heading binds to its text. There is no
+  `p + h2` style override; an earlier one cut the space above sections to less
+  than the heading's own margin.
+- **Two widths.** `rehype-widths.js` sets a table or code block full width when it
+  will not fit the column: a table whose unwrapped row exceeds 72 characters of
+  table type by more than a fifth, a code block with a line over 76 characters.
+  Those limits are counted against the CSS values above and move with them. In a
+  table, columns of at most 20 characters get `.nowrap` when together they leave
+  room, so numbers and labels stay whole and the prose column wraps; below 760px
+  a prose cell beside them keeps `min-width: 16em` and the table scrolls. Headers
+  align with their column (left unless the Markdown says `:-:` or `--:`).
+  `table.fullwidth` needs the `section > .table-scroll > table.fullwidth` selector,
+  or the text-column rule for wrapped tables outranks it.
+- **Line breaking.** Text is ragged right, never justified (uneven word spacing
+  reads worse than an uneven edge). `body` hyphenates (`hyphens: auto`, words of
+  6+ letters, 3 on each side, at most 2 hyphenated lines in a row — with the
+  `-webkit-` forms Safari reads) and wraps with `text-wrap: pretty`; headings,
+  links, code and table headers do not hyphenate, and headings wrap balanced.
+  Hyphenation follows `<html lang>`. `rehype-typography.js` binds a number to a
+  following unit (`48 GB`, `17.5 %`, `250 ms`) from a fixed list, skipping code
+  and math.
 
 ## Metadata and SEO
 
