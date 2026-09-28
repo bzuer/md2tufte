@@ -7,9 +7,11 @@
 //     is wrapped in a focusable .table-scroll box (the stylesheet lets it scroll
 //     on a narrow screen instead of widening the page), and code blocks and
 //     display math take tabindex="0" themselves;
-//   - a header cell with nothing in it becomes a data cell. GFM requires a header
-//     row, so a table meant to have none arrives with an empty one, and an empty
-//     header announces nothing for the cells it heads;
+//   - GFM requires a header row, so a table meant to have none arrives with an
+//     empty one: a header row with nothing in it is dropped, and an empty header
+//     cell beside others (a corner cell) becomes a data cell. An empty header
+//     announces nothing for the cells it heads, and on the table's tinted panel
+//     an empty row would show as a bare stripe;
 //   - a task-list checkbox is labelled by its item's text;
 //   - a margin toggle is named for what it opens. A sidenote's number is drawn by
 //     a CSS counter, which browsers leave out of an accessible name, and a margin
@@ -17,7 +19,7 @@
 //     "Sidenote 3" or "Margin note". Sidenotes are counted here in document order,
 //     the order the CSS counter follows, so the name matches the number shown.
 
-import { visit } from "unist-util-visit";
+import { visit, SKIP } from "unist-util-visit";
 
 // Elements that end the inline run a task-list checkbox is labelled by.
 const BLOCK = new Set([
@@ -93,6 +95,11 @@ export function rehypeAccessibility() {
     let sidenotes = 0;
 
     visit(tree, "element", (node, index, parent) => {
+      if (node.tagName === "thead" && parent && typeof index === "number" && isEmpty(node)) {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
+
       if (node.tagName === "th" && isEmpty(node)) node.tagName = "td";
       if (node.tagName === "code" && parent?.tagName === "pre") makeFocusable(node);
       if (hasClass(node, "katex-display")) makeFocusable(node);

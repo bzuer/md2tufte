@@ -40,24 +40,20 @@
     --background: #ffffff;
     --text: #333;
     --rule: #ccc;
-    --rule-faint: #eee;
-    --row-hover: #fafafa;
-    --cell-hover: #f2f2f2;
+    --table-background: #f5f5f5;
     --danger: #c00;
 }
 
 /* Text at about 11.5:1, as in light mode (12.6:1): a near-black page under
-   near-white text (13:1 and up) makes thin serif strokes glare and blur. Hover
-   tints stay one step off the page colour, so the text keeps its contrast on a
-   highlighted row. */
+   near-white text (13:1 and up) makes thin serif strokes glare and blur. The
+   table panel sits one equal step of lightness off the page in either mode
+   (about 3.5-4 L*); #fafafa, at 1.7, was too faint to see. */
 @media (prefers-color-scheme: dark) {
     :root {
         --background: #1c1c1c;
         --text: #d4d4d4;
         --rule: #555;
-        --rule-faint: #2e2e2e;
-        --row-hover: #242424;
-        --cell-hover: #2d2d2d;
+        --table-background: #242424;
         --danger: #ff6b6b;
     }
 }
@@ -282,10 +278,16 @@ table {
     margin-bottom: 1.6rem;
 }
 
+/* A table is a panel one step off the page, so it reads as one object apart
+   from the text; the row under the pointer returns to the page colour, so the
+   eye can follow it across. Two tones only: a third, for the cell, made the
+   hover harder to read than none. Rows are divided by hairlines of the page
+   colour, which add no ink of their own. */
 table {
     border-collapse: collapse;
     font-size: 1.3rem;
     line-height: 1.6;
+    background-color: var(--table-background);
 }
 
 table caption {
@@ -325,19 +327,29 @@ table tbody td {
     vertical-align: top;
 }
 
+/* On a panel the text keeps clear of its edges. */
+table tr > :first-child {
+    padding-left: 0.6rem;
+}
+
+table thead th,
+table thead td {
+    padding-top: 0.6rem;
+}
+
+table tbody tr:last-child td {
+    padding-bottom: 0.6rem;
+}
+
 table tbody tr + tr td {
-    border-top: 1px solid var(--rule-faint);
+    border-top: 1px solid var(--background);
 }
 
-table tbody tr:hover td {
-    background-color: var(--row-hover);
-}
-
-/* Specific enough to beat the row rule above, which otherwise also paints the
-   cell under the pointer and hides this stronger tint. */
-table tbody tr:hover td:hover,
-table th:hover {
-    background-color: var(--cell-hover);
+/* Only where a pointer can hover: a tap would otherwise leave a row lit. */
+@media (hover: hover) {
+    table tbody tr:hover td {
+        background-color: var(--background);
+    }
 }
 
 /* Every table is wrapped in one of these by the pipeline. On a wide screen it is
