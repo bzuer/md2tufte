@@ -18,12 +18,13 @@ import { visit, SKIP } from "unist-util-visit";
 
 // A table whose unwrapped row fits the column, or overruns it by up to a fifth,
 // stays in the column: a few cells wrapping is cheaper than breaking the text's
-// alignment. Each column also costs about a character of cell padding.
+// alignment. Each column also costs its padding, 1.8rem, about three characters.
 const TABLE_COLUMN = 72;
 const TABLE_SLACK = 1.2;
 const TABLE_FULL = 120;
 const CODE_COLUMN = 76;
 const SHORT_CELL = 20;
+const CELL_PADDING = 3;
 
 function textOf(node) {
   if (node.type === "text") return node.value;
@@ -65,10 +66,9 @@ function columnWidths(rows) {
   return columns;
 }
 
-// The width the table would take with no cell wrapped, with a character of
-// padding per column.
+// The width the table would take with no cell wrapped, padding included.
 function naturalWidth(columns) {
-  return columns.reduce((sum, width) => sum + width + 1, 0);
+  return columns.reduce((sum, width) => sum + width + CELL_PADDING, 0);
 }
 
 // Short columns stay unbroken only if together they leave the table room: a

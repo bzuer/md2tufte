@@ -288,6 +288,10 @@ table {
     font-size: 1.3rem;
     line-height: 1.6;
     background-color: var(--table-background);
+    /* The column highlight below paints over the panel but under the text, and
+       stops at the table's edges. */
+    isolation: isolate;
+    clip-path: inset(0);
 }
 
 table caption {
@@ -298,11 +302,21 @@ table caption {
     margin-top: 0.6rem;
 }
 
+/* Columns stand 1.8rem apart, about five word spaces of table type: at 0.6rem,
+   no wider than a word space and a half, a row of short cells read as one
+   phrase ("~5.6 GB 5.6 GB Records…"). The same padding keeps text clear of the
+   panel's edges. src/lib/rehype-widths.js counts it as three characters. */
+table th,
+table td {
+    padding: 0.4rem 0.9rem;
+}
+
 table thead th,
 table thead td {
     font-weight: 600;
     border-bottom: 1px solid var(--rule);
-    padding: 0.4rem 0.6rem 0.6rem 0;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
     text-align: left;
 }
 
@@ -323,18 +337,7 @@ th.nowrap {
 }
 
 table tbody td {
-    padding: 0.4rem 0.6rem 0.4rem 0;
     vertical-align: top;
-}
-
-/* On a panel the text keeps clear of its edges. */
-table tr > :first-child {
-    padding-left: 0.6rem;
-}
-
-table thead th,
-table thead td {
-    padding-top: 0.6rem;
 }
 
 table tbody tr:last-child td {
@@ -347,24 +350,33 @@ table tbody tr + tr td {
 
 /* Where the pointer is, in the page colour: its whole row and its whole column,
    header included — a cross, so a cell is found the same way along either axis.
-   The column rules count cells by position, up to twelve columns, so a cell
-   spanning columns throws them off. Only where a pointer can hover: a tap would
-   otherwise leave cells lit. */
+   The column is drawn by the hovered cell itself, as a strip running the height
+   of the table behind the text, so both halves hang on plain :hover of what is
+   under the pointer. Selecting the column with table:has(:hover) instead was
+   left stale by Safari, which did not always recompute it when the pointer
+   moved on and kept scattered cells lit. Only where a pointer can hover: a tap
+   would otherwise leave cells lit. */
 @media (hover: hover) {
-    table tbody tr:hover td,
-    table:has(tr > :nth-child(1):hover) tr > :nth-child(1),
-    table:has(tr > :nth-child(2):hover) tr > :nth-child(2),
-    table:has(tr > :nth-child(3):hover) tr > :nth-child(3),
-    table:has(tr > :nth-child(4):hover) tr > :nth-child(4),
-    table:has(tr > :nth-child(5):hover) tr > :nth-child(5),
-    table:has(tr > :nth-child(6):hover) tr > :nth-child(6),
-    table:has(tr > :nth-child(7):hover) tr > :nth-child(7),
-    table:has(tr > :nth-child(8):hover) tr > :nth-child(8),
-    table:has(tr > :nth-child(9):hover) tr > :nth-child(9),
-    table:has(tr > :nth-child(10):hover) tr > :nth-child(10),
-    table:has(tr > :nth-child(11):hover) tr > :nth-child(11),
-    table:has(tr > :nth-child(12):hover) tr > :nth-child(12) {
+    table tbody tr:hover td {
         background-color: var(--background);
+    }
+
+    table td,
+    table th {
+        position: relative;
+    }
+
+    table td:hover::after,
+    table th:hover::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -100vh;
+        bottom: -100vh;
+        z-index: -1;
+        background-color: var(--background);
+        pointer-events: none;
     }
 }
 
@@ -376,9 +388,11 @@ table tbody tr + tr td {
     outline: none;
 }
 
+/* Drawn just inside the table's edge: the clip that keeps the column highlight
+   within the table would cut off a ring drawn outside it. */
 .table-scroll:focus-visible > table {
     outline: 2px solid currentColor;
-    outline-offset: 2px;
+    outline-offset: -2px;
 }
 
 p + p.subtitle {
