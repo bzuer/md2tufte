@@ -20,7 +20,9 @@ change that forces the author to edit anything in `src/`, `scripts/` or
 `config.ini`, from the Markdown itself, or from files already on disk.
 
 > Heads-up on the port: `[server] port` must match the address the Cloudflared tunnel
-> dials. The tunnel runs from a token (`/etc/cloudflared/token`), so its target lives
+> dials, for both public hostnames — `cruz.rio.br` and `www.cruz.rio.br`, whose
+> requests Nginx redirects to the apex; removing a hostname from the tunnel also
+> deletes its DNS record. The tunnel runs from a token (`/etc/cloudflared/token`), so its target lives
 > in the Cloudflare Zero Trust dashboard and nothing on this machine sets it;
 > `journalctl -u cloudflared` is the only local view of where it connects. On
 > 2026-09-27 the port moved from 1213 to 12121 (config `md2bruno.conf`) and the old
