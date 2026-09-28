@@ -345,9 +345,38 @@ table tbody tr + tr td {
     border-top: 1px solid var(--background);
 }
 
-/* Only where a pointer can hover: a tap would otherwise leave a row lit. */
+/* Where the pointer is, in the page colour. In the body: its row, which the eye
+   follows across, and the header of its column, which names the column without
+   lighting all of it; lit whole, a prose column took 77% of a table and hid the
+   row. Over a header: that whole column, for reading down it. The rules count
+   columns by position, up to twelve, so a cell spanning columns throws them off.
+   Only where a pointer can hover: a tap would otherwise leave cells lit. */
 @media (hover: hover) {
-    table tbody tr:hover td {
+    table tbody tr:hover td,
+    table:has(tbody tr > :nth-child(1):hover) thead tr > :nth-child(1),
+    table:has(tbody tr > :nth-child(2):hover) thead tr > :nth-child(2),
+    table:has(tbody tr > :nth-child(3):hover) thead tr > :nth-child(3),
+    table:has(tbody tr > :nth-child(4):hover) thead tr > :nth-child(4),
+    table:has(tbody tr > :nth-child(5):hover) thead tr > :nth-child(5),
+    table:has(tbody tr > :nth-child(6):hover) thead tr > :nth-child(6),
+    table:has(tbody tr > :nth-child(7):hover) thead tr > :nth-child(7),
+    table:has(tbody tr > :nth-child(8):hover) thead tr > :nth-child(8),
+    table:has(tbody tr > :nth-child(9):hover) thead tr > :nth-child(9),
+    table:has(tbody tr > :nth-child(10):hover) thead tr > :nth-child(10),
+    table:has(tbody tr > :nth-child(11):hover) thead tr > :nth-child(11),
+    table:has(tbody tr > :nth-child(12):hover) thead tr > :nth-child(12),
+    table:has(thead tr > :nth-child(1):hover) tr > :nth-child(1),
+    table:has(thead tr > :nth-child(2):hover) tr > :nth-child(2),
+    table:has(thead tr > :nth-child(3):hover) tr > :nth-child(3),
+    table:has(thead tr > :nth-child(4):hover) tr > :nth-child(4),
+    table:has(thead tr > :nth-child(5):hover) tr > :nth-child(5),
+    table:has(thead tr > :nth-child(6):hover) tr > :nth-child(6),
+    table:has(thead tr > :nth-child(7):hover) tr > :nth-child(7),
+    table:has(thead tr > :nth-child(8):hover) tr > :nth-child(8),
+    table:has(thead tr > :nth-child(9):hover) tr > :nth-child(9),
+    table:has(thead tr > :nth-child(10):hover) tr > :nth-child(10),
+    table:has(thead tr > :nth-child(11):hover) tr > :nth-child(11),
+    table:has(thead tr > :nth-child(12):hover) tr > :nth-child(12) {
         background-color: var(--background);
     }
 }
