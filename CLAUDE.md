@@ -19,11 +19,15 @@ change that forces the author to edit anything in `src/`, `scripts/` or
 `astro.config.mjs` to publish is a regression. Every other value is derived — from
 `config.ini`, from the Markdown itself, or from files already on disk.
 
-> Heads-up on naming: the repo, the package and the public URL are all `md2tufte`, but
-> the installed Nginx config is still `/etc/nginx/conf.d/md2html.conf`. That path is
-> the one piece of legacy naming left, and it is spelled out once, in
-> `config.ini` (`[server] nginx_conf`). Renaming it means installing the new file and
-> removing the old one by hand — two configs listening on the same port will not load.
+> Heads-up on the port: `[server] port` must match the address the Cloudflared tunnel
+> dials. The tunnel runs from a token (`/etc/cloudflared/token`), so its target lives
+> in the Cloudflare Zero Trust dashboard and nothing on this machine sets it;
+> `journalctl -u cloudflared` is the only local view of where it connects. On
+> 2026-09-27 the port moved from 1213 to 12121 (config `md2bruno.conf`) and the old
+> `md2html.conf` was removed while the tunnel still dialled 1213, and the public site
+> answered 502. Change the port and the tunnel together, then run
+> `./scripts/manage.sh verify` against the public site. `manage.sh` never deletes a
+> config it did not name.
 
 ## Project Structure
 
@@ -31,9 +35,17 @@ change that forces the author to edit anything in `src/`, `scripts/` or
 - `content/` — Markdown source (the author's writing; keep edits confined here unless
   changing the pipeline or layout).
   - `content/index.md` — home page, read directly by `src/pages/index.astro`.
+  - `content/md2tufte.md` — the syntax guide, **and the site's functional test
+    page**: every feature the pipeline and stylesheet support appears there as
+    what it is, the syntax that produces it, and the rendered result. Any change to
+    `src/lib/` or the stylesheet updates it in the same commit, and it is the page
+    to audit afterwards (see “Testing”).
   - Any other `content/*.md` maps to `/{filename}` via `src/pages/[slug].astro`
     (e.g. `content/md2tufte.md` → `/md2tufte`).
   - `content/img/` — image assets, referenced in Markdown as `/static/img/...`.
+  - `.gitignore` lists `content/`, so the author's other pages stay out of git;
+    `index.md`, `md2tufte.md` and `img/` were tracked before that and still are.
+    A change to them commits normally, but `git add` needs `-f`.
 - `docs/` — reference material, never built or published: `tufte.css` (the upstream
   Tufte CSS this site's stylesheet descends from) and `image-maker.py` (the script the
   author generated the artwork with).
@@ -56,6 +68,8 @@ change that forces the author to edit anything in `src/`, `scripts/` or
     transforms.
   - `rehype-contacts.js` — obfuscates email addresses and telephone links against
     harvesting.
+  - `rehype-accessibility.js` — the keyboard and screen-reader affordances the
+    author never writes (see “Accessibility”).
   - `content-images.js` — Vite plugin serving/copying `content/img/` as `/static/img/`.
   - `content.js` — the only place mapping `content/*.md` to routes.
   - `frontmatter.js` — optional YAML-subset frontmatter parser (no dependencies).
@@ -102,7 +116,8 @@ git-ignored `.env.deploy`.
 
 `renderMarkdown(markdown)` runs a `unified` chain: `remark-parse` → `remark-gfm` →
 `remark-math` → `remarkSidenotes` → `remark-rehype` (`allowDangerousHtml`) →
-`rehype-raw` → `rehype-katex` → `rehypeContacts` → `rehype-stringify`.
+`rehype-raw` → `rehype-katex` → `rehypeContacts` → `rehypeAccessibility` →
+`rehype-stringify`.
 
 `remarkSidenotes` is given two helper renderers (`renderInline`, `renderBlocks`) so it
 can turn note content into HTML before rehype runs. It handles:
@@ -113,8 +128,11 @@ can turn note content into HTML before rehype runs. It handles:
   address in it — so `^[a note with *emphasis*]` is a note, not literal text.
 - **Footnotes as sidenotes**: `Main text[^id]` + `[^id]: note text` → the definition is
   captured, removed from the flow, and rendered in the margin at the reference site.
-- **Image-title margin notes**: `![Alt](path "Caption")` → `<figure><img></figure>` plus
-  a `.marginnote` built from the title.
+- **Captioned images**: `![Alt](path "Caption")` → the title becomes a toggleable
+  `.marginnote` (⊕ label + checkbox), so the caption survives on a narrow screen. An
+  image alone in its paragraph replaces the paragraph with
+  `<figure>{note}<img></figure>` — a `<figure>` inside a `<p>` would split it; an
+  image inside a sentence stays inline, followed by its note.
 - **Inline `{:.marginnote}`**: an emphasis (`*text*{:.marginnote}`) or link
   (`[text](url){:.marginnote}`) immediately followed by `{:.marginnote}` becomes a
   toggleable `.marginnote`.
@@ -147,6 +165,56 @@ published page, which is what keeps the property from quietly regressing.
 
 The site ships no client-side JavaScript: the margin-note toggles are CSS checkboxes.
 Do not reintroduce a script tag without a reason a reader would feel.
+
+## Accessibility
+
+Every page must work in light and dark mode, reflow at 320px wide (a 1280px screen
+at 400% zoom) with no sideways page scroll, and be usable by keyboard and screen
+reader — all without JavaScript. Most of that is the build's job, not the author's.
+
+`rehypeAccessibility` runs after `rehype-raw`, so it covers hand-written HTML and
+pipeline output alike:
+
+- each `<table>` is wrapped in `<div class="table-scroll" tabindex="0">`; on narrow
+  screens the stylesheet makes that box scroll, so a wide table scrolls inside it
+  instead of widening the page. `pre > code` and `.katex-display` get
+  `tabindex="0"` for the same reason. Every such box is a tab stop, which is the
+  cost of keeping it scrollable where the browser does not focus scrollers itself
+  (Safari).
+- an empty `<th>` becomes `<td>`: GFM requires a header row, so a headerless table
+  arrives with an empty one. The stylesheet styles `thead td` like `thead th`.
+- a task-list checkbox and its inline text are wrapped in a `<label>`.
+- each `label.margin-toggle` gains a visually hidden name: “Sidenote N”, or “Margin
+  note” with the ⊕ marked `aria-hidden`. N is counted in document order, the order
+  the CSS counter numbers the notes in, and the drawn number is emitted as
+  `content: counter(...) / ""` so it is not announced twice. A label that already
+  contains words is left alone.
+
+In the stylesheet (`public/static/css/styles.dev.css`):
+
+- **Colours are tokens on `:root`**, redefined once under
+  `prefers-color-scheme: dark`. Never write a colour literal in a rule; add or reuse
+  a token and give it a dark value that keeps text at 4.5:1 or better. The hover
+  tints are why: they were once light-mode literals, and in dark mode a hovered row
+  turned near-white under light text (1.21:1). `--background` must match
+  `theme_light` / `theme_dark` in `config.ini`.
+- In dark mode images sit on `--image-backdrop`: artwork with transparent areas
+  was drawn on white, and its ink disappears on the dark page otherwise.
+- On narrow screens `input.margin-toggle` is out of sight but still in the tab
+  order (`display: none` shut keyboard users out of every note); its focus ring is
+  drawn on the label through `label:has(+ input:focus-visible)`.
+- The sidenote counter is reset on `html`, not `body`: KaTeX's stylesheet sets
+  `counter-reset` on `body` and, loading later, replaces ours, which numbered every
+  note 1.
+- `a:link { color: inherit }` outranks any single-class colour rule on a link; the
+  skip link needs `.skip-link:link` to keep its reversed colours.
+- The root size is `87.5%`, not `14px`, so the reader's own font setting scales the
+  page; `overflow-wrap: break-word` on `body` lets URLs break instead of widening
+  it.
+
+The author's part is what no build can supply: alt text that describes the image,
+headings in order, link text that names its destination, and a unique `id` on each
+hand-written toggle. `content/md2tufte.md` demonstrates each.
 
 ## Metadata and SEO
 
@@ -240,7 +308,7 @@ reads `config.ini` through `node scripts/config.js`:
 ./scripts/manage.sh deploy           # the full pipeline, below
 ./scripts/manage.sh publish          # purge the edge, notify IndexNow
 ./scripts/manage.sh verify           # check the public origin over HTTP
-./scripts/manage.sh verify --origin http://127.0.0.1:1213
+./scripts/manage.sh verify --origin http://127.0.0.1:<port>
 ```
 
 `deploy` runs, in order: `npm run build` → install the Nginx config and reload →
@@ -367,8 +435,9 @@ Run `npm run build` before publishing to validate the static output.
   `BaseLayout.astro`, and keep meaningful `alt` text on images.
 - `README.md` documents the project for a reader; `content/md2tufte.md` is the syntax
   guide and the published example. Neither should copy the other.
-- Keep `CLAUDE.md` and `README.md` current when behavior changes. `AGENTS.md` is a
-  symlink to this file, so updating `CLAUDE.md` updates both.
+- Keep `CLAUDE.md`, `README.md` and `content/md2tufte.md` current when behavior
+  changes. `AGENTS.md` is a symlink to this file, so updating `CLAUDE.md` updates
+  both.
 
 ## Testing
 
@@ -376,7 +445,7 @@ Run `npm run build` before publishing to validate the static output.
 - `scripts/verify.js` is the standing check: it asserts the routing and metadata
   contract over HTTP against a running origin, and `./scripts/manage.sh deploy` runs it
   on both the origin and the public site. Run it alone with `./scripts/manage.sh verify`
-  or `./scripts/manage.sh verify --origin http://127.0.0.1:1213`.
+  or `./scripts/manage.sh verify --origin http://127.0.0.1:<port>`.
 - To exercise the generated Nginx config without touching the installed one, render it
   with `./scripts/manage.sh nginx --print`, change the port, and run a throwaway
   `nginx -p <prefix> -c <conf>` instance to verify against. This is the only way to
@@ -384,6 +453,18 @@ Run `npm run build` before publishing to validate the static output.
   open-redirect vectors after touching either `location ~` pattern. Reload retires
   the old workers asynchronously — stop and start the instance, or a probe may still
   be answered by the config you just replaced.
+- **Accessibility is audited in a real browser**, since contrast under hover,
+  focus rings and reflow exist only once the page is laid out. After touching the
+  stylesheet or the pipeline: build, serve `dist/` through a throwaway Nginx as
+  above, and drive headless Chromium (Playwright keeps one in
+  `~/.cache/ms-playwright/`) with `playwright-core` and `axe-core` installed in a
+  scratch directory — never as project dependencies. Cover every page, light and
+  dark, at 1280px and 390px: axe with the WCAG 2.2 AA and best-practice tags;
+  text contrast of every table cell while hovered (axe does not hover); a Tab walk
+  that checks each stop has a visible ring and that each margin toggle opens its
+  note with Space; `scrollWidth` at 320px; and the checkbox names in the
+  accessibility tree. Screenshot the guide in both schemes, and diff the other
+  pages against the previous build to catch unintended layout changes.
 - Otherwise validate with `npm run dev` (local review) and `npm run build`
   (production-like check). If you add unit tests later, document the command here and
   keep test files near their modules.
