@@ -71,7 +71,7 @@ export const site = {
   icons: icons(),
   themeColor: {
     light: siteIni.theme_light || "#ffffff",
-    dark: siteIni.theme_dark || "#151515",
+    dark: siteIni.theme_dark || "#1c1c1c",
   },
   search: {
     // Public by design: IndexNow proves a submission came from this host by

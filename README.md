@@ -36,7 +36,7 @@ language = en-US              ; <html lang>; og:locale becomes en_US
 description = ...             ; fallback description for pages that derive none
 keywords = one, two, three
 theme_light = #ffffff         ; browser UI colour; match --background in the CSS
-theme_dark = #151515
+theme_dark = #1c1c1c
 card_source = content/img/imga.png   ; artwork `npm run assets` builds the card from
 card_alt = ...                       ; alt text for the social card
 

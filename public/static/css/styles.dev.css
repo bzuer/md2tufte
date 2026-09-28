@@ -44,32 +44,32 @@
     --row-hover: #fafafa;
     --cell-hover: #f2f2f2;
     --danger: #c00;
-    --image-backdrop: transparent;
 }
 
-/* Hover tints stay one step off the page colour rather than near-white, so
-   light text keeps its contrast on a highlighted row. Artwork with transparent
-   areas was drawn against a white page; a light backdrop keeps its ink visible. */
+/* Text at about 11.5:1, as in light mode (12.6:1): a near-black page under
+   near-white text (13:1 and up) makes thin serif strokes glare and blur. Hover
+   tints stay one step off the page colour, so the text keeps its contrast on a
+   highlighted row. */
 @media (prefers-color-scheme: dark) {
     :root {
-        --background: #151515;
-        --text: #ddd;
+        --background: #1c1c1c;
+        --text: #d4d4d4;
         --rule: #555;
-        --rule-faint: #2a2a2a;
-        --row-hover: #1c1c1c;
-        --cell-hover: #262626;
+        --rule-faint: #2e2e2e;
+        --row-hover: #242424;
+        --cell-hover: #2d2d2d;
         --danger: #ff6b6b;
-        --image-backdrop: #f0f0f0;
     }
 }
 
 /* Tufte CSS styles */
-/* A percentage, so a reader's own default font size still scales the page.
+/* 15px, Tufte's own size, as a percentage so a reader's default font size still
+   scales the page (a narrow screen steps down to 14px, below).
    The sidenote counter is reset here rather than on body, where KaTeX's
    stylesheet sets counter-reset for its own counters and, loading later,
    replaces this one; each note would then count from 1 in its own paragraph. */
 html {
-    font-size: 87.5%;
+    font-size: 93.75%;
     counter-reset: sidenote-counter;
 }
 
@@ -128,42 +128,53 @@ body {
     font-family: "TG Pagella", "Palatino Linotype", "Palatino LT STD", "Book Antiqua", Georgia, serif;
     background-color: var(--background);
     color: var(--text);
-    max-width: 1400px;
+    /* The measure. At 80rem the 55% text column holds about 68 characters of
+       body type a line (45-75 is the readable range); a cap in px let it run to
+       87 on a wide screen. Being in rem, it grows with the type. */
+    max-width: 80rem;
     /* A URL or a long word may break rather than push the page sideways on a
        narrow screen. Unlike "anywhere", this leaves table columns' widths alone. */
     overflow-wrap: break-word;
 }
 
+/* Space above a heading grows with its rank — about two lines before a section,
+   one and a half before a subsection — while the gap below it is no more than
+   the gap between paragraphs, so a heading reads as part of what follows it. */
 h1 {
     font-weight: 400;
     margin-top: 4.2rem;
     margin-bottom: 2.6rem;
     font-size: 3.2rem;
-    line-height: 1;
+    line-height: 1.1;
 }
 
 h2 {
     font-style: italic;
     font-weight: 400;
-    margin-top: 2.8rem;
-    margin-bottom: 1.3rem;
+    margin-top: 4.2rem;
+    margin-bottom: 1.4rem;
     font-size: 2.2rem;
-    line-height: 1;
+    line-height: 1.1;
 }
 
 h3 {
     font-style: italic;
     font-weight: 400;
     font-size: 1.7rem;
-    margin-top: 2.4rem;
-    margin-bottom: 1.1rem;
-    line-height: 1;
+    margin-top: 2.8rem;
+    margin-bottom: 1.4rem;
+    line-height: 1.1;
 }
 
-h1 + p,
-h2 + p,
-h3 + p,
-h4 + p,
+h4 {
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.4rem;
+    margin-top: 2.1rem;
+    margin-bottom: 1.4rem;
+    line-height: 2rem;
+}
+
 p.subtitle + p {
     margin-top: 1.6rem;
 }
@@ -174,7 +185,7 @@ hr {
     width: 55%;
     border: 0;
     border-top: 1px solid var(--rule);
-    margin: 1em 0;
+    margin: 1.4rem 0;
     padding: 0;
 }
 
@@ -215,8 +226,8 @@ ul {
 }
 
 p {
-    margin-top: 1.1rem;
-    margin-bottom: 1.1rem;
+    margin-top: 1.4rem;
+    margin-bottom: 1.4rem;
     padding-right: 0;
     vertical-align: baseline;
 }
@@ -224,8 +235,8 @@ p {
 dl,
 ol,
 ul {
-    margin-top: 1.1rem;
-    margin-bottom: 1.1rem;
+    margin-top: 1.4rem;
+    margin-bottom: 1.4rem;
 }
 
 blockquote {
@@ -304,11 +315,6 @@ table th:hover {
     outline-offset: 2px;
 }
 
-/* Add breathing room after paragraphs before new sections. */
-p + h1,
-p + h2,
-p + h3,
-p + h4,
 p + p.subtitle {
     margin-top: 2.2rem;
 }
@@ -456,7 +462,6 @@ a:visited {
 /* Sidenotes, margin notes, figures, captions */
 img {
     max-width: 100%;
-    background-color: var(--image-backdrop);
 }
 
 /* Image quilts: <div class="image-quilt"> <img ...> ... </div> */
@@ -627,6 +632,10 @@ label.margin-toggle:not(.sidenote-number) {
 }
 
 @media (max-width: 760px) {
+    html {
+        font-size: 87.5%;
+    }
+
     body {
         width: 84%;
         padding-left: 8%;
