@@ -396,13 +396,15 @@ Colons in the separator row align a column, header included: `:--` left (the def
 
 Align columns logically and keep entries brief. If a table needs interpretation, add a short sentence directly below it to guide the reader.
 
+Every table is set on a panel one shade off the page, so it reads as one object apart from the text, with its rows divided by hairlines of the page colour. Under the pointer, a row returns to the page colour, so the eye can follow it across; nothing else changes tone.
+
 **Table Width**
 
 A table's width follows from what it holds, counted in characters. If its widest row, unwrapped, fits the text column (about 72 characters of table type) or overruns it by no more than a fifth, the table stays in the column and a few cells wrap. A wider table is set full width, taking in the margin, so a long column of prose wraps into fewer, longer lines. Columns of numbers and short labels, up to 20 characters, are kept on one line, and the wrapping falls on the prose. The tables on this page are examples of both widths.
 
 **Tables Without Headers**
 
-Markdown requires a header row. Leave its cells empty and the table renders without headers: an empty header cell is published as an ordinary cell, since a header that says nothing labels nothing.
+Markdown requires a header row. Leave its cells empty and the table renders without one: an empty header row is dropped, and a single empty header cell among others, such as a corner cell, is published as an ordinary cell, since a header that says nothing labels nothing.
 
 ```md
 |                                                |      |
