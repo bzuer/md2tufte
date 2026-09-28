@@ -247,8 +247,9 @@ of them.
   `p + h2` style override; an earlier one cut the space above sections to less
   than the heading's own margin.
 - **Two widths.** `rehype-widths.js` sets a table or code block full width when it
-  will not fit the column: a table whose unwrapped row exceeds 72 characters of
-  table type by more than a fifth, a code block with a line over 76 characters.
+  will not fit the column: a table whose unwrapped row (with three characters of
+  padding a column) exceeds 72 characters of table type by more than a fifth, a
+  code block with a line over 76 characters.
   Those limits are counted against the CSS values above and move with them. In a
   table, columns of at most 20 characters get `.nowrap` when together they leave
   room, so numbers and labels stay whole and the prose column wraps; below 760px
@@ -259,15 +260,24 @@ of them.
 - **Tables are a panel.** `table` takes `--table-background`, one equal step of
   lightness off the page in each mode (#f5f5f5 / #242424, about 3.5–4 L*; the old
   #fafafa, 1.7 L*, was too faint to see). Rows are divided by hairlines of
-  `--background`, and cells are padded off the panel's edges. Under the pointer
-  (inside `@media (hover: hover)`, so a tap leaves nothing lit), the cell's whole
-  row and whole column, header included, return to `--background`: a cross, so
-  both axes behave alike (the author's choice, for uniformity; lighting only the
-  column's header was tried). A wide prose column lights a large share of its
-  table this way — up to 77% measured — which is the accepted cost. The column
-  rules count cells by `:nth-child` up to twelve columns, so a `colspan` throws
-  them off. Two tones only: a third, for the cell under the pointer, made tables
-  harder to read. A header row with nothing in it is dropped by
+  `--background`. Cells are padded `0.4rem 0.9rem`: columns stand 1.8rem apart,
+  about five word spaces of table type — at 0.6rem a row of short cells read as
+  one phrase — and the same padding keeps text off the panel's edges. Under the
+  pointer (inside `@media (hover: hover)`, so a tap leaves nothing lit), the
+  cell's whole row and whole column, header included, return to `--background`:
+  a cross, so both axes behave alike (the author's choice, for uniformity;
+  lighting only the column's header was tried). A wide prose column lights a
+  large share of its table this way — up to 77% measured — which is the accepted
+  cost. Two tones only: a third, for the cell under the pointer, made tables
+  harder to read.
+- **The column highlight hangs on plain `:hover`.** The hovered cell draws it
+  itself: a `::after` strip running far above and below it at `z-index: -1`,
+  which `isolation: isolate` on the table keeps above the panel and below the
+  text, and `clip-path: inset(0)` keeps inside the table (without the clip it
+  would paint over the text around the table). Selecting the column with
+  `table:has(:hover)` was tried first and left stale in Safari: cells stayed lit
+  after the pointer moved on. The clip also cuts anything drawn outside the
+  table, so the table's focus ring has `outline-offset: -2px`. A header row with nothing in it is dropped by
   `rehype-accessibility.js`, or it would show as a bare stripe on the panel.
 - **Line breaking.** Text is ragged right, never justified (uneven word spacing
   reads worse than an uneven edge). `body` hyphenates (`hyphens: auto`, words of
