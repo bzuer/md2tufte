@@ -396,7 +396,7 @@ Colons in the separator row align a column, header included: `:--` left (the def
 
 Align columns logically and keep entries brief. If a table needs interpretation, add a short sentence directly below it to guide the reader.
 
-Every table is set on a panel one shade off the page, so it reads as one object apart from the text, with its rows divided by hairlines of the page colour. Under the pointer, a row returns to the page colour, so the eye can follow it across, and so does the header of its column, which names the column without lighting all of it. Pointing at a header lights its whole column instead, for reading down it. Nothing else changes tone.
+Every table is set on a panel one shade off the page, so it reads as one object apart from the text, with its rows divided by hairlines of the page colour. Under the pointer, the cell's whole row and whole column return to the page colour, a cross that finds the cell the same way along either axis; pointing at a header lights its column. Nothing else changes tone.
 
 **Table Width**
 
