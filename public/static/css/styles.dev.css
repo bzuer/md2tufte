@@ -33,6 +33,36 @@
     font-display: swap;
 }
 
+/* Every colour the page paints, so dark mode is one override of these tokens
+   rather than a second copy of each rule. The backgrounds match theme_light and
+   theme_dark in config.ini, which colour the browser around the page. */
+:root {
+    --background: #ffffff;
+    --text: #333;
+    --rule: #ccc;
+    --rule-faint: #eee;
+    --row-hover: #fafafa;
+    --cell-hover: #f2f2f2;
+    --danger: #c00;
+    --image-backdrop: transparent;
+}
+
+/* Hover tints stay one step off the page colour rather than near-white, so
+   light text keeps its contrast on a highlighted row. Artwork with transparent
+   areas was drawn against a white page; a light backdrop keeps its ink visible. */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #151515;
+        --text: #ddd;
+        --rule: #555;
+        --rule-faint: #2a2a2a;
+        --row-hover: #1c1c1c;
+        --cell-hover: #262626;
+        --danger: #ff6b6b;
+        --image-backdrop: #f0f0f0;
+    }
+}
+
 /* Tufte CSS styles */
 html {
     font-size: 14px;
@@ -47,10 +77,16 @@ html {
     overflow: hidden;
     white-space: nowrap;
     padding: 0.5rem 0.75rem;
-    background: #111;
-    color: #fff;
+    background: var(--text);
     text-decoration: none;
     z-index: 1000;
+}
+
+/* Drawn in reverse. The :link form outranks the a:link rule further down, which
+   would otherwise make the text the colour of the box behind it. */
+.skip-link:link,
+.skip-link:visited {
+    color: var(--background);
 }
 
 .skip-link:focus,
@@ -60,7 +96,7 @@ html {
     width: auto;
     height: auto;
     overflow: visible;
-    outline: 2px solid #fff;
+    outline: 2px solid var(--text);
     outline-offset: 2px;
 }
 
@@ -70,18 +106,10 @@ body {
     margin-right: auto;
     padding-left: 12.5%;
     font-family: "TG Pagella", "Palatino Linotype", "Palatino LT STD", "Book Antiqua", Georgia, serif;
-    background-color: #ffffff;
-    color: #333;
+    background-color: var(--background);
+    color: var(--text);
     max-width: 1400px;
     counter-reset: sidenote-counter;
-}
-
-/* Adds dark mode */
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #151515;
-        color: #ddd;
-    }
 }
 
 h1 {
@@ -123,7 +151,7 @@ hr {
     height: 1px;
     width: 55%;
     border: 0;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid var(--rule);
     margin: 1em 0;
     padding: 0;
 }
@@ -144,7 +172,7 @@ p.subtitle {
 }
 
 .danger {
-    color: red;
+    color: var(--danger);
 }
 
 article {
@@ -205,7 +233,7 @@ table caption {
 
 table thead th {
     font-weight: 600;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid var(--rule);
     padding: 0.4rem 0.6rem 0.6rem 0;
     text-align: center;
 }
@@ -216,16 +244,16 @@ table tbody td {
 }
 
 table tbody tr + tr td {
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--rule-faint);
 }
 
 table tbody tr:hover td {
-    background-color: #fafafa;
+    background-color: var(--row-hover);
 }
 
 table td:hover,
 table th:hover {
-    background-color: #f2f2f2;
+    background-color: var(--cell-hover);
 }
 
 /* Add breathing room after paragraphs before new sections. */
@@ -370,6 +398,7 @@ a:visited {
 /* Sidenotes, margin notes, figures, captions */
 img {
     max-width: 100%;
+    background-color: var(--image-backdrop);
 }
 
 /* Image quilts: <div class="image-quilt"> <img ...> ... </div> */
