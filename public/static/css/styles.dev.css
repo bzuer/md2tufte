@@ -135,6 +135,38 @@ body {
     /* A URL or a long word may break rather than push the page sideways on a
        narrow screen. Unlike "anywhere", this leaves table columns' widths alone. */
     overflow-wrap: break-word;
+    /* Ragged-right text, evened out. Hyphenation (in the language <html lang>
+       names) takes the deepest bites out of the right edge, held to words of six
+       letters or more with three on each side of the break, and to two hyphens
+       in a row; "pretty" wrapping then weighs each paragraph's line breaks
+       together instead of one line at a time. Justifying instead would trade the
+       ragged edge for uneven word spacing, which is harder to read. */
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    hyphenate-limit-chars: 6 3 3;
+    -webkit-hyphenate-limit-before: 3;
+    -webkit-hyphenate-limit-after: 3;
+    -webkit-hyphenate-limit-lines: 2;
+    text-wrap: pretty;
+}
+
+/* Headings, links, code and table headers keep their words whole: a hyphen in
+   a title or a URL reads as part of it. Headings of more than one line are
+   balanced rather than left with a short last line. */
+h1,
+h2,
+h3,
+h4 {
+    -webkit-hyphens: manual;
+    hyphens: manual;
+    text-wrap: balance;
+}
+
+a,
+code,
+th {
+    -webkit-hyphens: manual;
+    hyphens: manual;
 }
 
 /* Space above a heading grows with its rank — about two lines before a section,

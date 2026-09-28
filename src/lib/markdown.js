@@ -10,6 +10,7 @@ import { remarkSidenotes } from "./remark-sidenotes.js";
 import { rehypeContacts } from "./rehype-contacts.js";
 import { rehypeAccessibility } from "./rehype-accessibility.js";
 import { rehypeWidths } from "./rehype-widths.js";
+import { rehypeTypography } from "./rehype-typography.js";
 
 function stripWrappingParagraph(html) {
   const trimmed = html.trim();
@@ -63,6 +64,7 @@ export async function renderMarkdown(markdown) {
     // After rehypeRaw, so the anchors the author wrote as raw HTML — and the notes
     // the sidenote plugin rendered to HTML strings — are real elements by now.
     .use(rehypeContacts)
+    .use(rehypeTypography)
     .use(rehypeWidths)
     .use(rehypeAccessibility)
     .use(rehypeStringify);
