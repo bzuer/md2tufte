@@ -187,8 +187,9 @@ pipeline output alike:
   `tabindex="0"` for the same reason. Every such box is a tab stop, which is the
   cost of keeping it scrollable where the browser does not focus scrollers itself
   (Safari).
-- an empty `<th>` becomes `<td>`: GFM requires a header row, so a headerless table
-  arrives with an empty one. The stylesheet styles `thead td` like `thead th`.
+- GFM requires a header row, so a headerless table arrives with an empty one: a
+  `<thead>` with nothing in it is removed, and an empty `<th>` among others (a
+  corner cell) becomes `<td>`, which the stylesheet styles like `thead th`.
 - a task-list checkbox and its inline text are wrapped in a `<label>`.
 - each `label.margin-toggle` gains a visually hidden name: “Sidenote N”, or “Margin
   note” with the ⊕ marked `aria-hidden`. N is counted in document order, the order
@@ -255,6 +256,14 @@ of them.
   align with their column (left unless the Markdown says `:-:` or `--:`).
   `table.fullwidth` needs the `section > .table-scroll > table.fullwidth` selector,
   or the text-column rule for wrapped tables outranks it.
+- **Tables are a panel.** `table` takes `--table-background`, one equal step of
+  lightness off the page in each mode (#f5f5f5 / #242424, about 3.5–4 L*; the old
+  #fafafa, 1.7 L*, was too faint to see). Rows are divided by hairlines of
+  `--background`, the row under the pointer returns to `--background` (inside
+  `@media (hover: hover)`, so a tap leaves nothing lit), and cells are padded off
+  the panel's edges. Two tones only: a third, for the cell under the pointer, made
+  tables harder to read. A header row with nothing in it is dropped by
+  `rehype-accessibility.js`, or it would show as a bare stripe on the panel.
 - **Line breaking.** Text is ragged right, never justified (uneven word spacing
   reads worse than an uneven edge). `body` hyphenates (`hyphens: auto`, words of
   6+ letters, 3 on each side, at most 2 hyphenated lines in a row — with the
