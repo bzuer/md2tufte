@@ -269,17 +269,23 @@ table thead td {
     font-weight: 600;
     border-bottom: 1px solid var(--rule);
     padding: 0.4rem 0.6rem 0.6rem 0;
-    text-align: center;
+    text-align: left;
 }
 
-/* A column aligned in Markdown (:--, :-:, --:) carries align on every cell; the
-   centring above would otherwise override it on the header alone. */
-table thead th[align="left"] {
-    text-align: left;
+/* A header sits the way its column does: left by default like the cells under
+   it, or as the Markdown separator row asks (:-: centre, --: right). */
+table thead th[align="center"] {
+    text-align: center;
 }
 
 table thead th[align="right"] {
     text-align: right;
+}
+
+/* Set by the pipeline on columns of numbers and labels (src/lib/rehype-widths.js). */
+td.nowrap,
+th.nowrap {
+    white-space: nowrap;
 }
 
 table tbody td {
@@ -537,8 +543,13 @@ blockquote .marginnote {
     text-align: left;
 }
 
+/* Full width runs from the text's left edge to the margin's right edge: 90% of
+   the page. The pipeline sets it on a table or code block too wide for the text
+   column (src/lib/rehype-widths.js); the section rule keeps it from being held
+   to the column inside the table's scroll box. */
 div.fullwidth,
-table.fullwidth {
+table.fullwidth,
+section > .table-scroll > table.fullwidth {
     width: 100%;
 }
 
@@ -582,8 +593,13 @@ pre > code {
     display: block;
 }
 
+/* The block keeps the code's 2.5% indent, so the code itself spans 87.5%. */
+pre.fullwidth {
+    max-width: none;
+}
+
 pre.fullwidth > code {
-    width: 90%;
+    width: 87.5%;
 }
 
 .fullwidth {
@@ -636,6 +652,10 @@ label.margin-toggle:not(.sidenote-number) {
         font-size: 87.5%;
     }
 
+    .fullwidth {
+        max-width: 100%;
+    }
+
     body {
         width: 84%;
         padding-left: 8%;
@@ -667,6 +687,12 @@ label.margin-toggle:not(.sidenote-number) {
         margin: 0;
     }
 
+    /* Beside columns kept on one line, a prose column would be squeezed to a
+       word per line; it keeps a readable width and the table scrolls instead. */
+    tr:has(.nowrap) > td:not(.nowrap) {
+        min-width: 16em;
+    }
+
     .table-scroll:focus-visible {
         outline: 2px solid currentColor;
     }
@@ -675,7 +701,8 @@ label.margin-toggle:not(.sidenote-number) {
         outline: none;
     }
 
-    pre > code {
+    pre > code,
+    pre.fullwidth > code {
         width: 97%;
     }
 
