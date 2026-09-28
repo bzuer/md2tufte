@@ -35,7 +35,7 @@ short_name = bccc             ; install name in the web app manifest
 language = en-US              ; <html lang>; og:locale becomes en_US
 description = ...             ; fallback description for pages that derive none
 keywords = one, two, three
-theme_light = #ffffff
+theme_light = #ffffff         ; browser UI colour; match --background in the CSS
 theme_dark = #151515
 card_source = content/img/imga.png   ; artwork `npm run assets` builds the card from
 card_alt = ...                       ; alt text for the social card
@@ -47,11 +47,11 @@ affiliation = ...
 links = https://github.com/bzuer, https://orcid.org/...   ; schema.org sameAs
 
 [server]
-port = 1213                              ; port Nginx serves dist/ on
-nginx_conf = /etc/nginx/conf.d/md2html.conf   ; defaults to the project's directory name
+port = 12121                                  ; port Nginx serves dist/ on
+nginx_conf = /etc/nginx/conf.d/md2bruno.conf  ; defaults to the project's directory name
 
 [search]
-indexnow_key = 336c...    ; published at /<key>.txt; empty disables submission
+indexnow_key = b3ac...    ; published at /<key>.txt; empty disables submission
 
 [verification]
 google-site-verification =   ; each key becomes a <meta name> when given a value
@@ -138,7 +138,7 @@ the site can afford because it ships no client-side JavaScript.
 
 - Sidenotes: `Main text^[This becomes a sidenote]`
 - Footnotes: `Main text[^note]` + `[^note]: note text` (rendered as sidenotes)
-- Margin notes from image titles: `![Alt](path "Caption")`
+- Captioned images: `![Alt](path "Caption")` — the caption goes in the margin
 - Margin notes via `{:.marginnote}` on inline emphasis or links
 - Math with KaTeX: inline `$E = mc^2$`, block `$$ a^2 + b^2 = c^2 $$`
 - GitHub-flavoured Markdown: tables, task lists, strikethrough
@@ -147,6 +147,17 @@ the site can afford because it ships no client-side JavaScript.
 
 The complete guide, with rendered examples, is
 [`content/md2tufte.md`](content/md2tufte.md).
+
+## Accessibility
+
+Pages follow the reader's light or dark setting, reflow down to a 320px screen
+(400% zoom) without sideways scrolling, and can be read with a keyboard or a
+screen reader, with no JavaScript. The build adds what that takes, so the author
+writes none of it: wide tables and code scroll in their own focusable box, margin
+toggles are reachable and named ("Sidenote 2", "Margin note"), task-list boxes
+are labelled, and an empty header row makes a headerless table. What the author
+still owes is alt text, headings in order and link text that names its
+destination. The guide's "Reading Modes and Accessibility" section shows each.
 
 ## Contact Details
 
