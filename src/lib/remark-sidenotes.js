@@ -133,19 +133,41 @@ export function remarkSidenotes(options = {}) {
       }
     });
 
+    // ![Alt](path "Caption"): the title becomes a toggleable margin note, so the
+    // caption is not lost on a narrow screen, where margin notes are hidden until
+    // opened. An image alone in its paragraph becomes a <figure>, in place of the
+    // paragraph — a <figure> inside a <p> would split it — with the note first so
+    // it aligns with the top of the image. An image inside a sentence stays inline.
+    const captioned = (node) => {
+      marginCounter += 1;
+      const alt = escapeAttribute(node.alt || "");
+      const src = escapeAttribute(node.url || "");
+      const caption = renderInline ? renderInline(node.title) : escapeHtml(node.title);
+      return { image: `<img src="${src}" alt="${alt}" />`, note: marginnote(`mn-${marginCounter}`, caption) };
+    };
+
+    visit(tree, "paragraph", (node, index, parent) => {
+      if (!parent || typeof index !== "number") {
+        return;
+      }
+
+      const content = node.children.filter((child) => child.type !== "text" || child.value.trim());
+      if (content.length !== 1 || content[0].type !== "image" || !content[0].title) {
+        return;
+      }
+
+      const { image, note } = captioned(content[0]);
+      parent.children.splice(index, 1, { type: "html", value: `<figure>${note}${image}</figure>` });
+      return [SKIP, index + 1];
+    });
+
     visit(tree, "image", (node, index, parent) => {
       if (!parent || typeof index !== "number" || !node.title) {
         return;
       }
 
-      const alt = escapeAttribute(node.alt || "");
-      const src = escapeAttribute(node.url || "");
-      const caption = renderInline ? renderInline(node.title) : escapeHtml(node.title);
-      const html =
-        `<figure><img src="${src}" alt="${alt}" /></figure>` +
-        `<span class="marginnote">${caption}</span>`;
-
-      parent.children.splice(index, 1, { type: "html", value: html });
+      const { image, note } = captioned(node);
+      parent.children.splice(index, 1, { type: "html", value: `${image}${note}` });
       return index + 1;
     });
 

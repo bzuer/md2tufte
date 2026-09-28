@@ -68,6 +68,21 @@ html {
     font-size: 14px;
 }
 
+:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+/* For text that names a control to assistive technology without showing. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
 .skip-link {
     position: absolute;
     left: -999px;
@@ -231,7 +246,8 @@ table caption {
     margin-top: 0.6rem;
 }
 
-table thead th {
+table thead th,
+table thead td {
     font-weight: 600;
     border-bottom: 1px solid var(--rule);
     padding: 0.4rem 0.6rem 0.6rem 0;
@@ -254,6 +270,19 @@ table tbody tr:hover td {
 table td:hover,
 table th:hover {
     background-color: var(--cell-hover);
+}
+
+/* Every table is wrapped in one of these by the pipeline. On a wide screen it is
+   an ordinary block the table's margins collapse through; on a narrow one it
+   scrolls, so a wide table does not widen the whole page. It is focusable so a
+   keyboard can scroll it, and the ring is drawn on the table it holds. */
+.table-scroll:focus-visible {
+    outline: none;
+}
+
+.table-scroll:focus-visible > table {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 
 /* Add breathing room after paragraphs before new sections. */
@@ -321,7 +350,8 @@ blockquote footer {
 
 section > p,
 section > footer,
-section > table {
+section > table,
+section > .table-scroll > table {
     width: 55%;
 }
 
@@ -450,8 +480,12 @@ img {
     vertical-align: baseline;
 }
 
+/* The number is decoration to assistive technology, which reads the label's
+   hidden "Sidenote N" instead (src/lib/rehype-accessibility.js). A browser
+   without the "/ alt" form keeps the first declaration. */
 .sidenote-number:after {
     content: counter(sidenote-counter);
+    content: counter(sidenote-counter) / "";
     font-size: 1rem;
     top: -0.5rem;
     left: 0.1rem;
@@ -574,8 +608,28 @@ label.margin-toggle:not(.sidenote-number) {
     hr,
     section > p,
     section > footer,
-    section > table {
+    section > table,
+    section > .table-scroll > table {
         width: 100%;
+    }
+
+    /* Scrolling makes the box contain the table's margins instead of letting
+       them collapse through, so the box takes them over. */
+    .table-scroll {
+        overflow-x: auto;
+        margin: 1.6rem 0;
+    }
+
+    .table-scroll > table {
+        margin: 0;
+    }
+
+    .table-scroll:focus-visible {
+        outline: 2px solid currentColor;
+    }
+
+    .table-scroll:focus-visible > table {
+        outline: none;
     }
 
     pre > code {
@@ -623,6 +677,23 @@ label.margin-toggle:not(.sidenote-number) {
 
     label.margin-toggle:not(.sidenote-number) {
         display: inline;
+    }
+
+    /* The label is what shows, but the checkbox is what a keyboard reaches, so
+       here it leaves sight without leaving the tab order. Its focus ring is drawn
+       on the label. */
+    input.margin-toggle {
+        display: inline;
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: 0;
+        opacity: 0;
+    }
+
+    label.margin-toggle:has(+ input.margin-toggle:focus-visible) {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
     }
 
     .sidenote,
