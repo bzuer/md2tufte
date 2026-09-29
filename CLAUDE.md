@@ -28,12 +28,19 @@ change that forces the author to edit anything in `src/`, `scripts/` or
 > 2026-09-27 the port moved from 1213 to 12121 (config `md2bruno.conf`) and the old
 > `md2html.conf` was removed while the tunnel still dialled 1213, and the public site
 > answered 502. Change the port and the tunnel together, then run
-> `./scripts/manage.sh verify` against the public site. `manage.sh` never deletes a
-> config it did not name.
+> `./scripts/manage.sh status`: it compares the public site's `Last-Modified` with
+> the origin's, so a tunnel that dials the wrong port — or another machine — fails
+> a check instead of passing unnoticed. The tunnel must dial `127.0.0.1:<port>`, not
+> `localhost`: the site listens on IPv4 loopback only (see “Conventions shared with
+> `~/app` and `~/api`”). `manage.sh`
+> never deletes a config it did not name.
 
 ## Project Structure
 
-- `config.ini` — every site-wide setting (see “Configuration”).
+- `config.ini` — every site-wide setting (see “Configuration”). `.gitignore` lists
+  it; it was tracked before that and still is, like `content/index.md`.
+- `config.example.ini` — the tracked template a new checkout copies to `config.ini`.
+  Without `config.ini` the build stops with that instruction.
 - `content/` — Markdown source (the author's writing; keep edits confined here unless
   changing the pipeline or layout).
   - `content/index.md` — home page, read directly by `src/pages/index.astro`.
@@ -375,33 +382,37 @@ reads `config.ini` through `node scripts/config.js`:
 ```bash
 ./scripts/manage.sh dev
 ./scripts/manage.sh build
-./scripts/manage.sh nginx            # install the generated config and reload
-./scripts/manage.sh nginx --print    # render it to stdout, change nothing
 ./scripts/manage.sh deploy           # the full pipeline, below
-./scripts/manage.sh publish          # purge the edge, notify IndexNow
+./scripts/manage.sh status           # build, Nginx, port, origin, public site; writes nothing
 ./scripts/manage.sh verify           # check the public origin over HTTP
 ./scripts/manage.sh verify --origin http://127.0.0.1:<port>
+./scripts/manage.sh publish          # purge the edge, notify IndexNow
+./scripts/manage.sh nginx            # install the generated config and reload
+./scripts/manage.sh nginx --print    # render it to stdout, change nothing
+./scripts/manage.sh uninstall        # remove the Nginx config, dist/, .astro/, node_modules/
 ```
 
-`deploy` runs, in order: `npm run build` → install the Nginx config and reload →
-**verify the origin** at `127.0.0.1:<port>` → **publish** → **verify the public site**.
-The origin is checked before anything is published on purpose: purging the edge and
-inviting a crawl are worth nothing if the server behind them is answering wrongly.
-`--no-publish` and `--no-verify` skip those stages.
+`deploy` runs, in order: dependencies (only when needed) → `npm run build` → Nginx →
+**verify the origin** at `127.0.0.1:<port>` → **publish** → **status** → **verify the
+public site**. The origin is checked before anything is published on purpose: purging
+the edge and inviting a crawl are worth nothing if the server behind them is answering
+wrongly. `--no-publish` skips the publish stage; `--no-verify` skips the HTTP checks
+and the status report.
 
-The Nginx config is **regenerated and reinstalled on every deploy**, so the server can
-never keep serving a stale copy — an earlier version of this project broke exactly that
-way, answering 500 from a path that no longer existed after the repo was renamed.
+The installed Nginx config is **compared with the rendered one on every deploy** and
+reinstalled whenever they differ, so the server can never keep serving a stale copy —
+an earlier version of this project broke exactly that way, answering 500 from a path
+that no longer existed after the repo was renamed (a renamed checkout changes `root`,
+so the comparison catches it).
 
 - `scripts/nginx.js` renders the config from `config.ini` and prints it; it needs no
-  root, so the output can be read before it is installed. `manage.sh nginx` installs it,
-  grants the Nginx user traversal into the site root (ACLs, falling back to `chmod`),
-  runs `nginx -t` and reloads.
+  root, so the output can be read before it is installed.
 - `scripts/publish.js` purges the whole Cloudflare zone — unhashed assets (images,
   icons, the card) keep their URL when their bytes change, so a targeted purge would
   have to know what changed — and then submits to IndexNow. Absent credentials **skip**
   the purge with an explanation instead of failing the deploy; credentials that are
-  present and then error do fail it. They are never printed.
+  present and then error do fail it. They are never printed, and `.env.deploy` is
+  narrowed to mode 600 whenever it is found wider.
 - `scripts/verify.js` asserts over HTTP what a build can only imply: canonical tag,
   description, `og:image`, Twitter card and JSON-LD on the home page; the 301 forms; a
   real 404 on an unknown URL; `robots.txt`, `sitemap.xml`, the manifest, every icon, the
@@ -411,6 +422,66 @@ way, answering 500 from a path that no longer existed after the repo was renamed
   probes whichever page the author happens to have written — never a hardcoded slug —
   and `--origin <url>` points it at any origin, which is how `deploy` checks the local
   server and the public site with the same code.
+- `manage.sh status` checks what `verify.js` cannot see from outside: the build
+  exists, Nginx is active, the installed config equals the rendered one, the port is
+  bound to exactly the configured loopback address and answered by Nginx, the origin
+  answers 200, the public site answers 200 **and serves this build** (its
+  `Last-Modified` equals the origin's), and `.env.deploy` is readable by its owner
+  only. Each failure names the command that fixes it.
+
+### Conventions shared with `~/app` and `~/api`
+
+`manage.sh` follows the operating rules of the other services on this server
+(`~/app/scripts/manage.sh`, `~/api/scripts/manage.sh`), so the three behave alike:
+
+- **Nginx is the only listener, on loopback.** Nothing else of the site's is
+  reachable; `status` fails if the port is bound outside loopback, to other
+  addresses than the config asks for, or answered by anything but Nginx.
+- **The installed config is held to the rendered one.** `status` reports drift,
+  `deploy` repairs it, `nginx --print` shows it without root. A config `nginx -t`
+  rejects is rolled back, and a port another config listens on is refused.
+- **A reload cannot move a listener**: Nginx binds the new address while the old
+  socket is still open, the bind fails, and the reload still returns 0. After every
+  reload the sockets are compared with the config, and Nginx is restarted when they
+  differ.
+- **Root only when needed**, through one `as_root` helper: as root it runs directly,
+  otherwise through `sudo`, which may prompt in a terminal and must already be
+  granted when unattended — failing that, the step stops and names the command. A
+  deploy that changes nothing outside the checkout asks for no password. Run as root,
+  the build steps drop to the checkout's owner, so `dist/` and `node_modules/` never
+  become root's.
+- **`status` never writes**, and `deploy` ends with it.
+- **The Node version is checked.** The minimum is Astro's `engines` field, read from
+  `package-lock.json` rather than restated; when the Node on `PATH` is missing or
+  older (sudo and cron drop the nvm `PATH`), the owner's nvm versions are searched,
+  newest first.
+- **Dependencies install themselves**: `npm ci` from the lockfile whenever
+  `node_modules` is missing or older than `package-lock.json`.
+- **`uninstall`** removes what the project installed — its Nginx config (only if that
+  file serves this checkout's `dist/`), `dist/`, `.astro/`, `node_modules/` — and keeps
+  the source, `content/` and `config.ini`.
+- **Per-site logs**: `/var/log/nginx/<config name>.access.log` and `.error.log`,
+  rotated by the system's `/var/log/nginx/*.log` rule.
+
+What the other two have and this site deliberately does not:
+
+- **No systemd unit**, and so no stray-unit or rogue-process cleanup and no
+  start/stop/restart/maintenance commands. Their units keep a Node process alive;
+  nothing of this site runs between deploys, since Nginx serves `dist/` itself.
+- **No IndexNow timer.** The app submits hourly because its pages change with its
+  database; these change only on deploy, which submits them.
+- **No `[::1]` listener.** The app adds one for a connector that resolves
+  `localhost` to it, but a listen on an address the host does not have fails
+  `nginx -t` for *every* site, and this host has had IPv6 turned off at runtime. The
+  site listens on `127.0.0.1` alone, and the tunnel dials that.
+- **No env file in `/etc`.** Settings stay in `config.ini`, in the checkout.
+
+Nginx reads `dist/` as its own user (the `user` in `/etc/nginx/nginx.conf`), through a
+home directory closed to it. `manage.sh` gives that user traverse (`x`) on each parent
+that lacks it — root only for a parent the owner does not own — read on `dist/`, and a
+default ACL on `dist/`, so whatever a later `npm run build` writes is readable without
+another grant (Astro empties `dist/` but keeps the directory). ACLs only: a
+`chmod o+rx` fallback would open the home directory to every account.
 
 For Cloudflared, point the tunnel at `http://127.0.0.1:<port>`.
 
@@ -435,9 +506,8 @@ its own checkout on its own port. Nothing may be shared but Nginx itself:
   global belongs in `config.ini` as a per-site value, or nowhere.
 - The dev server is the one shared default: Astro starts at port 4321 and steps to the
   next free one, so a second `npm run dev` does not fail, it just moves.
-- Dependencies are per checkout: a new one needs `npm install` before it can build.
-  `manage.sh` checks for `node_modules/.bin/astro` and says so, because npm's own
-  error for a missing install (`astro: not found`) points nowhere.
+- Dependencies are per checkout. `manage.sh` installs them from the lockfile when
+  they are missing or stale, so a new checkout builds with no `npm install` first.
 
 The generated Nginx config is part of the site's correctness, not just its plumbing:
 
@@ -519,12 +589,18 @@ Run `npm run build` before publishing to validate the static output.
   on both the origin and the public site. Run it alone with `./scripts/manage.sh verify`
   or `./scripts/manage.sh verify --origin http://127.0.0.1:<port>`.
 - To exercise the generated Nginx config without touching the installed one, render it
-  with `./scripts/manage.sh nginx --print`, change the port, and run a throwaway
-  `nginx -p <prefix> -c <conf>` instance to verify against. This is the only way to
+  with `./scripts/manage.sh nginx --print`, change the port, point the two log paths
+  from `/var/log/nginx/` into the prefix (an unprivileged instance cannot open them),
+  and run a throwaway `nginx -p <prefix> -c <conf>` instance to verify against. This is the only way to
   test the redirect and header rules, and the right place to re-probe the
   open-redirect vectors after touching either `location ~` pattern. Reload retires
   the old workers asynchronously — stop and start the instance, or a probe may still
-  be answered by the config you just replaced.
+  be answered by the config you just replaced. `manage.sh`'s own install path
+  (backup, rollback, rebind) can be exercised against the same instance by sourcing
+  its functions with `PORT` and `NGINX_CONF` pointed there and a stand-in `sudo` on
+  `PATH` that maps `nginx`/`systemctl` onto `-p <prefix>`.
+- `./scripts/manage.sh status` is the read-only check of the running topology; run
+  it after any change to Nginx, the port or the tunnel.
 - **Accessibility is audited in a real browser**, since contrast under hover,
   focus rings and reflow exist only once the page is laid out. After touching the
   stylesheet or the pipeline: build, serve `dist/` through a throwaway Nginx as

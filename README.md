@@ -25,7 +25,8 @@ referenced as `/static/img/...`.
 ## config.ini
 
 Every site-wide setting lives here. Nothing in `src/` needs to be touched to
-publish a different site.
+publish a different site. A fresh checkout starts by copying `config.example.ini`
+to `config.ini`.
 
 ```ini
 [site]
@@ -70,20 +71,30 @@ message and the deploy still succeeds.
 ## Publishing
 
 ```bash
-./scripts/manage.sh deploy    # build, Nginx, verify, publish, verify again
+./scripts/manage.sh deploy    # build, Nginx, verify, publish, status, verify again
+./scripts/manage.sh status    # report on the build, Nginx, the port and both origins
+./scripts/manage.sh verify    # check a running origin over HTTP
+./scripts/manage.sh publish   # purge the Cloudflare cache, submit to IndexNow
 ./scripts/manage.sh nginx     # install the generated config and reload
 ./scripts/manage.sh nginx --print   # render it to stdout, change nothing
-./scripts/manage.sh publish   # purge the Cloudflare cache, submit to IndexNow
-./scripts/manage.sh verify    # check a running origin over HTTP
+./scripts/manage.sh uninstall # remove the Nginx config, the build and node_modules
 ```
 
-`deploy` builds, installs the Nginx config, checks the local origin, purges the
-edge, notifies the search engines, and checks the public site — in that order, so
-nothing is published on top of an origin that is answering wrongly. Add
-`--no-publish` or `--no-verify` to skip a stage.
+`deploy` installs the dependencies when they are missing or stale, builds,
+updates the Nginx config if it differs from the generated one, checks the local
+origin, purges the edge, notifies the search engines, reports the status and
+checks the public site — in that order, so nothing is published on top of an
+origin that is answering wrongly. Add `--no-publish` or `--no-verify` to skip a
+stage. It asks for `sudo` only when something under `/etc` has to change.
 
-Nginx serves `dist/` on `127.0.0.1:<port>`; point a Cloudflared tunnel at the
-same address.
+`status` changes nothing. Among its checks, it compares the public site with the
+local origin, so a tunnel pointed at the wrong port — or at another machine —
+shows up as a failure rather than as a site that quietly stopped updating.
+
+Nginx serves `dist/` on `127.0.0.1:<port>`, and nothing else of the site is
+reachable; point a Cloudflared tunnel at that address (`127.0.0.1`, not
+`localhost`). The scripts follow the same rules as the other services on the
+server — see `CLAUDE.md`.
 
 ### Several sites on one server
 
@@ -102,9 +113,8 @@ being left on disk, where it would break the next reload of every other site.
 The dev server is the one shared default: `npm run dev` starts on Astro's port
 4321 and steps to the next free one when a sibling site already holds it.
 
-Each checkout carries its own dependencies, so a new one needs `npm install`
-before it can build — `manage.sh` says so rather than letting npm fail with
-`astro: not found`.
+Each checkout carries its own dependencies; `manage.sh` installs them from the
+lockfile when they are missing, so a new checkout needs no separate step.
 
 ## Metadata
 
@@ -178,7 +188,8 @@ a published page.
 ## Project Structure
 
 ```
-config.ini            Every site-wide setting
+config.ini            Every site-wide setting (git-ignored)
+config.example.ini    The template a new checkout copies to config.ini
 content/              Markdown source and content/img/ artwork
 docs/                 Reference material, not part of the build
 public/static/        Tufte CSS, fonts, icons and the generated social card
