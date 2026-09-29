@@ -9,7 +9,7 @@
 // Credentials come from the environment or from .env.deploy, which .gitignore
 // already covers. They are never printed.
 
-import { readFile } from "node:fs/promises";
+import { chmod, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { site } from "../src/lib/config.js";
 import { distDir, rootDir } from "../src/lib/paths.js";
@@ -20,11 +20,19 @@ const sitemapFile = path.join(distDir, "sitemap.xml");
 // A KEY=VALUE file, nothing more: no interpolation, no export keyword. Values
 // already present in the environment win, so a one-off override works.
 async function loadEnvFile() {
+  const file = path.join(rootDir, ".env.deploy");
   let source;
   try {
-    source = await readFile(path.join(rootDir, ".env.deploy"), "utf8");
+    source = await readFile(file, "utf8");
   } catch {
     return;
+  }
+
+  // The token can purge the whole zone, so no other account on the machine may
+  // read the file that holds it.
+  if ((await stat(file)).mode & 0o077) {
+    await chmod(file, 0o600);
+    console.log(`${"env".padEnd(11)} .env.deploy narrowed to 600`);
   }
 
   for (const line of source.split("\n")) {

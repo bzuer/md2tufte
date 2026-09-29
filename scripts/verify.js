@@ -2,8 +2,8 @@
 // site depends on, asserted over HTTP rather than assumed from the build output.
 // Run from the project root, or through scripts/manage.sh, which cds there.
 //
-//   node scripts/verify.js                                  # the public origin
-//   node scripts/verify.js --origin http://127.0.0.1:1213   # behind the edge
+//   node scripts/verify.js                                    # the public origin
+//   node scripts/verify.js --origin http://127.0.0.1:<port>   # behind the edge
 //
 // Exits non-zero on the first failing expectation, so `manage.sh deploy` stops
 // with a reason instead of reporting success it has not confirmed.
@@ -33,7 +33,7 @@ function quote(value) {
 const args = process.argv.slice(2);
 const originIndex = args.indexOf("--origin");
 if (originIndex !== -1 && !args[originIndex + 1]) {
-  console.error("--origin needs a URL, e.g. --origin http://127.0.0.1:1213");
+  console.error(`--origin needs a URL, e.g. --origin http://127.0.0.1:${site.server.port}`);
   process.exit(1);
 }
 const origin = (originIndex === -1 ? site.url : args[originIndex + 1]).replace(/\/$/, "");

@@ -36,7 +36,17 @@ function list(value) {
     .filter(Boolean);
 }
 
-const ini = parseIni(readFileSync(configFile, "utf8"));
+// config.ini is git-ignored; a fresh checkout starts from the tracked template.
+function readConfig() {
+  try {
+    return readFileSync(configFile, "utf8");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    throw new Error("config.ini not found: copy config.example.ini to config.ini and set this site's values");
+  }
+}
+
+const ini = parseIni(readConfig());
 const settings = (name) => ini[name] ?? {};
 
 const siteIni = settings("site");

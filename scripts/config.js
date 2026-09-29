@@ -6,7 +6,6 @@ import { distDir } from "../src/lib/paths.js";
 
 const values = {
   SITE_URL: site.url,
-  SITE_HOST: site.host,
   PORT: site.server.port,
   NGINX_CONF: site.server.nginxConf,
   DIST: distDir,

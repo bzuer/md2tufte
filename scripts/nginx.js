@@ -9,9 +9,15 @@ import { site } from "../src/lib/config.js";
 import { distDir } from "../src/lib/paths.js";
 
 const { port, nginxConf } = site.server;
+const name = path.basename(nginxConf, ".conf");
 // Map variables are global to the Nginx process; naming this one after the
 // config file keeps it from colliding with another site on the same server.
-const cacheVariable = `${path.basename(nginxConf, ".conf").replace(/[^a-z0-9]/gi, "_")}_cache`;
+const cacheVariable = `${name.replace(/[^a-z0-9]/gi, "_")}_cache`;
+
+// Each site on the server logs to its own files, named like its config, so one
+// site's traffic and errors can be read apart from the others'.
+const logs = `  access_log /var/log/nginx/${name}.access.log;
+  error_log /var/log/nginx/${name}.error.log;`;
 
 // The site ships no client-side JavaScript, so script-src can be closed outright;
 // a JSON-LD block is data, not a script, and is not covered by it. Inline styles
@@ -37,6 +43,7 @@ const wwwRedirect = site.host.includes(".") && !site.host.startsWith("www.")
 server {
   listen 127.0.0.1:${port};
   server_name www.${site.host};
+${logs}
   return 301 https://${site.host}$request_uri;
 }
 `
@@ -55,11 +62,15 @@ map $uri $${cacheVariable} {
 }
 ${wwwRedirect}
 server {
+  # Loopback only: the tunnel connector is the one client. IPv4 only, too: a
+  # listener on ::1 fails nginx -t, for every site on the server, whenever the
+  # host has IPv6 turned off. The tunnel dials 127.0.0.1, not localhost.
   listen 127.0.0.1:${port} default_server;
   server_name ${site.host};
   root ${distDir};
   index index.html;
   charset utf-8;
+${logs}
 
   # Path-only Location headers, so redirects keep the scheme the edge terminated on.
   absolute_redirect off;
