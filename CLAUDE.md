@@ -440,13 +440,20 @@ so the comparison catches it).
 - **The installed config is held to the rendered one.** `status` reports drift,
   `deploy` repairs it, `nginx --print` shows it without root. A config `nginx -t`
   rejects is rolled back, and a port another config listens on is refused.
+- **A failure is laid at the right door.** `nginx -t` tests every site at once, so
+  when it fails the test is repeated with this site's previous config back in
+  place: if it still fails, the fault is another config's, and the message says so
+  (naming the file, for a listen on an address the host no longer has) instead of
+  blaming the generated config.
 - **A reload cannot move a listener**: Nginx binds the new address while the old
   socket is still open, the bind fails, and the reload still returns 0. After every
   reload the sockets are compared with the config, and Nginx is restarted when they
   differ.
 - **Root only when needed**, through one `as_root` helper: as root it runs directly,
   otherwise through `sudo`, which may prompt in a terminal and must already be
-  granted when unattended — failing that, the step stops and names the command. A
+  granted when unattended — failing that, the step stops and names the command.
+  The Nginx step asks once, up front, so sudo's own messages (a mistyped password)
+  never land in captured or discarded output; reading the configs needs no root. A
   deploy that changes nothing outside the checkout asks for no password. Run as root,
   the build steps drop to the checkout's owner, so `dist/` and `node_modules/` never
   become root's.
@@ -472,7 +479,11 @@ What the other two have and this site deliberately does not:
   database; these change only on deploy, which submits them.
 - **No `[::1]` listener.** The app adds one for a connector that resolves
   `localhost` to it, but a listen on an address the host does not have fails
-  `nginx -t` for *every* site, and this host has had IPv6 turned off at runtime. The
+  `nginx -t` — and any restart — for *every* site. On this machine NordVPN turns
+  IPv6 off on all interfaces while it is connected (its Linux client has no setting
+  to keep it). On 2026-09-28 that left `ethnos-app.conf`'s `listen [::1]:1212`
+  failing, and with it every deploy here, until the VPN was disconnected; the
+  sockets Nginx bound before kept serving, so nothing looked wrong until a test. The
   site listens on `127.0.0.1` alone, and the tunnel dials that.
 - **No env file in `/etc`.** Settings stay in `config.ini`, in the checkout.
 

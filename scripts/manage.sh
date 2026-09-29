@@ -155,14 +155,35 @@ reload_nginx() {
   as_root systemctl reload nginx || as_root systemctl restart nginx
 }
 
+# The one failure a host can cause on its own: a listen on an address it no
+# longer has. The usual case is ::1 after IPv6 was turned off at runtime, which
+# VPN clients do while connected; sockets bound before survive, so the running
+# Nginx looks healthy while nginx -t and any restart fail for every site.
+explain_nginx_failure() {
+  local address files why
+  address="$(sed -n 's/.*bind() to \([^ ]*\) failed (99:.*/\1/p' <<<"$1" | head -1)"
+  [ -n "$address" ] || return 0
+  files="$(grep -lF "listen ${address}" /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+  why="${address} is not an address this host has"
+  if [[ "$address" == \[* ]] && [ "$(cat /proc/sys/net/ipv6/conf/lo/disable_ipv6 2>/dev/null)" = 1 ]; then
+    why="${why}: IPv6 is turned off (net.ipv6.conf.lo.disable_ipv6 = 1)"
+  fi
+  err "${why}. Remove that listen from ${files:-the config that declares it}, or bring the address back."
+}
+
 install_nginx_conf() {
   require nginx ss
   [ -f "$DIST/index.html" ] || die "No build in ${DIST} — run: scripts/manage.sh build"
 
+  # Asked once, in the open: sudo's own messages must not land in a captured or
+  # discarded stream further down.
+  as_root true
+
   # Two default_server blocks on one address stop Nginx from loading at all,
-  # which would take down every site on this server, not just this one.
+  # which would take down every site on this server, not just this one. Nginx
+  # configs are world-readable, so finding them needs no root.
   local taken
-  taken="$(as_root grep -lE "^[[:space:]]*listen[[:space:]]+([^;]*:)?${PORT}\b" \
+  taken="$(grep -lE "^[[:space:]]*listen[[:space:]]+([^;]*:)?${PORT}\b" \
     /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* 2>/dev/null |
     grep -vFx "$NGINX_CONF" || true)"
   if [ -n "$taken" ]; then
@@ -184,15 +205,24 @@ install_nginx_conf() {
   rm -f "$rendered"
 
   # A rejected config must not stay on disk: the next reload of any other site
-  # on this server would fail on it.
-  if ! as_root nginx -t -q; then
+  # on this server would fail on it. nginx -t tests every site at once, so the
+  # test is repeated without this change to tell whose config is at fault.
+  local test_output
+  if ! test_output="$(as_root nginx -t -q 2>&1)"; then
     if [ -n "$backup" ]; then
       as_root install -m 644 -o root -g root "$backup" "$NGINX_CONF"
       rm -f "$backup"
-      die "Nginx rejected the generated config; the previous one was restored."
+    else
+      as_root rm -f "$NGINX_CONF"
     fi
-    as_root rm -f "$NGINX_CONF"
-    die "Nginx rejected the generated config; it was not installed."
+    if as_root nginx -t -q >/dev/null 2>&1; then
+      printf '%s\n' "$test_output" >&2
+      die "Nginx rejected the generated config; ${NGINX_CONF} was left as it was."
+    fi
+    test_output="$(as_root nginx -t -q 2>&1 || true)"
+    printf '%s\n' "$test_output" >&2
+    explain_nginx_failure "$test_output"
+    die "nginx -t fails without this site's change too: the fault is in another config. ${NGINX_CONF} was left as it was."
   fi
   [ -z "$backup" ] || rm -f "$backup"
 
