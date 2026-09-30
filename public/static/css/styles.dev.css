@@ -279,8 +279,8 @@ table {
 }
 
 /* A table is a panel one step off the page, so it reads as one object apart
-   from the text; the row under the pointer returns to the page colour, so the
-   eye can follow it across. Two tones only: a third, for the cell, made the
+   from the text; under the pointer its header and the row the pointer is on
+   return to the page colour. Two tones only: a third, for the cell, made the
    hover harder to read than none. Rows are divided by hairlines of the page
    colour, which add no ink of their own. */
 table {
@@ -288,10 +288,6 @@ table {
     font-size: 1.3rem;
     line-height: 1.6;
     background-color: var(--table-background);
-    /* The column highlight below paints over the panel but under the text, and
-       stops at the table's edges. */
-    isolation: isolate;
-    clip-path: inset(0);
 }
 
 table caption {
@@ -348,35 +344,18 @@ table tbody tr + tr td {
     border-top: 1px solid var(--background);
 }
 
-/* Where the pointer is, in the page colour: its whole row and its whole column,
-   header included — a cross, so a cell is found the same way along either axis.
-   The column is drawn by the hovered cell itself, as a strip running the height
-   of the table behind the text, so both halves hang on plain :hover of what is
-   under the pointer. Selecting the column with table:has(:hover) instead was
-   left stale by Safari, which did not always recompute it when the pointer
-   moved on and kept scattered cells lit. Only where a pointer can hover: a tap
-   would otherwise leave cells lit. */
+/* In the page colour under the pointer: the row it is on, which the eye follows
+   across, and the header, which names what the row holds. A column is not lit:
+   lit whole, a prose column took most of its table and hid the row. The header
+   hangs on the table's own :hover, so it lights wherever the pointer is on the
+   table; table:has(tr:hover) was avoided, since Safari left :has(:hover) stale,
+   keeping cells lit after the pointer moved on. Only where a pointer can hover:
+   a tap would otherwise leave cells lit. */
 @media (hover: hover) {
-    table tbody tr:hover td {
+    table tbody tr:hover > *,
+    table:hover thead th,
+    table:hover thead td {
         background-color: var(--background);
-    }
-
-    table td,
-    table th {
-        position: relative;
-    }
-
-    table td:hover::after,
-    table th:hover::after {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: -100vh;
-        bottom: -100vh;
-        z-index: -1;
-        background-color: var(--background);
-        pointer-events: none;
     }
 }
 
@@ -388,11 +367,9 @@ table tbody tr + tr td {
     outline: none;
 }
 
-/* Drawn just inside the table's edge: the clip that keeps the column highlight
-   within the table would cut off a ring drawn outside it. */
 .table-scroll:focus-visible > table {
     outline: 2px solid currentColor;
-    outline-offset: -2px;
+    outline-offset: 2px;
 }
 
 p + p.subtitle {
