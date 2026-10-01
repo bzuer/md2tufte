@@ -155,6 +155,26 @@ reload_nginx() {
   as_root systemctl reload nginx || as_root systemctl restart nginx
 }
 
+# The directories the rendered config writes its logs into.
+log_dirs() {
+  render_nginx_conf | awk '$1 == "access_log" || $1 == "error_log" { sub(";", "", $2); print $2 }' |
+    xargs -r -n1 dirname | LC_ALL=C sort -u
+}
+
+# root:adm, mode 0755, is how the nginx package creates /var/log/nginx.
+recreate_log_dir() {
+  printf 'sudo install -d -m 0755 -o root -g adm %s' "$1"
+}
+
+# Nginx creates a log file but never its directory. Without it nginx -t and any
+# restart fail for every site, while the running Nginx serves on as before.
+require_log_dirs() {
+  local dir
+  for dir in $(log_dirs); do
+    [ -d "$dir" ] || die "${dir} is missing, so Nginx cannot open this site's logs — run: $(recreate_log_dir "$dir")"
+  done
+}
+
 # The one failure a host can cause on its own: a listen on an address it no
 # longer has. The usual case is ::1 after IPv6 was turned off at runtime, which
 # VPN clients do while connected; sockets bound before survive, so the running
@@ -174,6 +194,7 @@ explain_nginx_failure() {
 install_nginx_conf() {
   require nginx ss
   [ -f "$DIST/index.html" ] || die "No build in ${DIST} — run: scripts/manage.sh build"
+  require_log_dirs
 
   # Asked once, in the open: sudo's own messages must not land in a captured or
   # discarded stream further down.
@@ -222,7 +243,7 @@ install_nginx_conf() {
     test_output="$(as_root nginx -t -q 2>&1 || true)"
     printf '%s\n' "$test_output" >&2
     explain_nginx_failure "$test_output"
-    die "nginx -t fails without this site's change too: the fault is in another config. ${NGINX_CONF} was left as it was."
+    die "nginx -t fails without this site's change too, so the fault is not in this site's config. ${NGINX_CONF} was left as it was."
   fi
   [ -z "$backup" ] || rm -f "$backup"
 
@@ -338,6 +359,15 @@ validate_all() {
   else
     flunk "nginx config missing or stale (${NGINX_CONF}) — run: scripts/manage.sh nginx"
   fi
+
+  local dir
+  for dir in $(log_dirs); do
+    if [ -d "$dir" ]; then
+      pass "log directory present (${dir})"
+    else
+      flunk "log directory ${dir} is missing, so nginx -t and any restart fail — run: $(recreate_log_dir "$dir")"
+    fi
+  done
 
   local addrs want exposed
   addrs="$(port_addresses)"

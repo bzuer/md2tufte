@@ -421,11 +421,12 @@ so the comparison catches it).
   and `--origin <url>` points it at any origin, which is how `deploy` checks the local
   server and the public site with the same code.
 - `manage.sh status` checks what `verify.js` cannot see from outside: the build
-  exists, Nginx is active, the installed config equals the rendered one, the port is
-  bound to exactly the configured loopback address and answered by Nginx, the origin
-  answers 200, the public site answers 200 **and serves this build** (its
-  `Last-Modified` equals the origin's), and `.env.deploy` is readable by its owner
-  only. Each failure names the command that fixes it.
+  exists, Nginx is active, the installed config equals the rendered one, the
+  directory it logs into exists, the port is bound to exactly the configured
+  loopback address and answered by Nginx, the origin answers 200, the public site
+  answers 200 **and serves this build** (its `Last-Modified` equals the origin's),
+  and `.env.deploy` is readable by its owner only. Each failure names the command
+  that fixes it.
 
 ### Conventions shared with `~/app` and `~/api`
 
@@ -440,9 +441,9 @@ so the comparison catches it).
   rejects is rolled back, and a port another config listens on is refused.
 - **A failure is laid at the right door.** `nginx -t` tests every site at once, so
   when it fails the test is repeated with this site's previous config back in
-  place: if it still fails, the fault is another config's, and the message says so
-  (naming the file, for a listen on an address the host no longer has) instead of
-  blaming the generated config.
+  place: if it still fails, the fault is not this site's config, and the message
+  says so (naming the file, for a listen on an address the host no longer has)
+  instead of blaming the generated config.
 - **A reload cannot move a listener**: Nginx binds the new address while the old
   socket is still open, the bind fails, and the reload still returns 0. After every
   reload the sockets are compared with the config, and Nginx is restarted when they
@@ -466,7 +467,11 @@ so the comparison catches it).
   file serves this checkout's `dist/`), `dist/`, `.astro/`, `node_modules/` — and keeps
   the source, `content/` and `config.ini`.
 - **Per-site logs**: `/var/log/nginx/<config name>.access.log` and `.error.log`,
-  rotated by the system's `/var/log/nginx/*.log` rule.
+  rotated by the system's `/var/log/nginx/*.log` rule. Nginx creates a log file but
+  never its directory: on 2026-09-28 `/var/log/nginx` was deleted, and `nginx -t`
+  and every reload failed while the running Nginx served on. The Nginx step stops
+  before touching anything when the directory is missing, and `status` fails, both
+  naming `sudo install -d -m 0755 -o root -g adm /var/log/nginx`.
 
 What the other two have and this site deliberately does not:
 

@@ -3,7 +3,7 @@ title: "The md2tufte Possibilities: a Practical Guide"
 description: "A practical guide to the md2tufte Markdown syntax: sidenotes, margin notes, full-width figures, tables and math, rendered with Tufte CSS."
 keywords: [md2tufte, Tufte CSS, Edward Tufte, Markdown, sidenotes, margin notes, Astro, static site, information design, technical writing]
 ---
-# **The *md2tufte* Possibilities**: a Brief and Practical Guide 
+# **The *md2tufte* Possibilities**: a Brief and Practical Guide
 
 This document is a comprehensive, self-contained demonstration of Markdown syntax and advanced styling techniques, showcasing how to create clear, effective, and visually sophisticated technical writing. Written entirely in Markdown with embedded HTML where necessary, it serves as both a reference and a live example: every feature the site supports appears below with the syntax that produces it and the result it renders.
 
@@ -597,27 +597,27 @@ from itertools import combinations
 def build_the_image(n_points, n_lines, points_color='#e6aa62', line_color='#5e8b6a', file_name="output.png"):
 
     coords = np.random.rand(n_points, 2)
-
+    
     fig, ax = plt.subplots(figsize=(5, 5))
-
+    
     fig.patch.set_facecolor('none')
     fig.patch.set_alpha(0)
     ax.set_facecolor('none')
-
+    
     todas_possibilidades = list(combinations(range(n_points), 2))
     n_lines = min(n_lines, len(todas_possibilidades))
     conexoes = random.sample(todas_possibilidades, n_lines)
-
+    
     for i, j in conexoes:
         p1, p2 = coords[i], coords[j]
         ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=line_color, linewidth=0.5, alpha=0.6)
-
+    
     ax.scatter(coords[:, 0], coords[:, 1], color=points_color, s=20, zorder=3)
-
+    
     ax.set_axis_off()
     plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
     plt.margins(0, 0)
-
+    
     plt.savefig(file_name, dpi=300, transparent=True, bbox_inches='tight', pad_inches=0)
     plt.close(fig)
 

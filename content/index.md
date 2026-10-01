@@ -14,8 +14,6 @@ noindex: false
 <img src="/static/img/bruno_cruz.png" alt="Stylised Bruno's self-portrait as a wooden puppet with a moustache and bow tie against a colourful geometric background.">
 </span>	
 
-## About
-
 Journalist and social scientist. Doctoral researcher in the Graduate Program in Social Anthropology at the National Museum, Federal University of Rio de Janeiro.
 
 The doctoral research focuses on understanding Western Thought in its Modern type. To achieve this, it pursues Max Weber's historical-terminological constructions.
