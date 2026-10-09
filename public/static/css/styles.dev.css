@@ -35,10 +35,13 @@
 
 /* Every colour the page paints, so dark mode is one override of these tokens
    rather than a second copy of each rule. The backgrounds match theme_light and
-   theme_dark in config.ini, which colour the browser around the page. */
+   theme_dark in config.ini, which colour the browser around the page.
+   --text-recede is the text of a section not being read (see "Anchor sections"):
+   lighter, and still about 5:1 in either mode, 4.8:1 on a table's panel. */
 :root {
     --background: #ffffff;
     --text: #333;
+    --text-recede: #6b6b6b;
     --rule: #ccc;
     --table-background: #f5f5f5;
     --danger: #c00;
@@ -52,6 +55,7 @@
     :root {
         --background: #1c1c1c;
         --text: #d4d4d4;
+        --text-recede: #8f8f8f;
         --rule: #555;
         --table-background: #242424;
         --danger: #ff6b6b;
@@ -67,6 +71,14 @@
 html {
     font-size: 93.75%;
     counter-reset: sidenote-counter;
+}
+
+/* A jump to an anchor glides there rather than cutting, so the reader sees
+   which way the page moved. */
+@media (prefers-reduced-motion: no-preference) {
+    html {
+        scroll-behavior: smooth;
+    }
 }
 
 :focus-visible {
@@ -152,7 +164,9 @@ body {
 h1,
 h2,
 h3,
-h4 {
+h4,
+h5,
+h6 {
     -webkit-hyphens: manual;
     hyphens: manual;
     text-wrap: balance;
@@ -165,9 +179,12 @@ th {
     hyphens: manual;
 }
 
-/* Space above a heading grows with its rank — about two lines before a section,
-   one and a half before a subsection — while the gap below it is no more than
-   the gap between paragraphs, so a heading reads as part of what follows it. */
+/* The ranks (src/lib/remark-sections.js): the page title is the h1; a # in the
+   Markdown is a section's h2, ## a subsection's h3 in bold text type, ### and
+   below an italic h4. Space above a heading grows with its rank — about two
+   lines before a section, one and a half before a subsection — while the gap
+   below it is no more than the gap between paragraphs, so a heading reads as
+   part of what follows it. */
 h1 {
     font-weight: 400;
     margin-top: 4.2rem;
@@ -186,15 +203,16 @@ h2 {
 }
 
 h3 {
-    font-style: italic;
-    font-weight: 400;
-    font-size: 1.7rem;
+    font-weight: 700;
+    font-size: 1.4rem;
     margin-top: 2.8rem;
     margin-bottom: 1.4rem;
-    line-height: 1.1;
+    line-height: 2rem;
 }
 
-h4 {
+h4,
+h5,
+h6 {
     font-style: italic;
     font-weight: 400;
     font-size: 1.4rem;
@@ -243,6 +261,95 @@ article {
 section {
     padding-top: 1.4rem;
     padding-bottom: 1.4rem;
+}
+
+/* Anchor sections: one per # in the Markdown, after the title and the lead
+   (src/lib/remark-sections.js). A section adds no space of its own: its
+   heading's margin collapses through it, so sections stand as far apart as a
+   heading stands from the text above it. A jump to one leaves room above the
+   heading. */
+article > section[id] {
+    padding-top: 0;
+    padding-bottom: 0;
+    scroll-margin-top: 2rem;
+}
+
+/* The contents, emitted when a page has two sections or more. Every line of it
+   is a link, so none is underlined until the pointer or the focus is on it: a
+   column of underlines weighed more than the text it introduced. */
+nav.contents > ul {
+    width: 55%;
+    padding-inline-start: 0;
+    list-style: none;
+}
+
+nav.contents a:link,
+nav.contents a:visited {
+    text-decoration: none;
+}
+
+nav.contents a:hover,
+nav.contents a:focus-visible {
+    text-decoration: underline;
+}
+
+/* The section being read keeps the text colour and the others recede to a
+   lighter one, following the scroll: a section is read while it covers the
+   top half of the screen, and fades in or out as its edge crosses that half,
+   so the hand-over between two sections runs over the same distance wherever
+   it happens. Colour, not opacity, recedes: figures keep their tones, and a
+   colour of its own (.danger) keeps its contrast. The last section may be too
+   short ever to reach the top half, so it is read once it is wholly on the
+   screen, or covers it, and stays read to the end of the page.
+   A section jumped to or holding the keyboard focus is read wherever it is.
+   That is a second number, --lit, eased by a transition rather than set in
+   the animation: a transition never starts from an animated value, so
+   switching the animation off instead made the colour jump.
+   Without scroll-driven animations, or when the reader asks for more
+   contrast, every section keeps the text colour. */
+@property --recede {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+
+@property --lit {
+    syntax: "<number>";
+    inherits: false;
+    initial-value: 0;
+}
+
+@media (prefers-contrast: no-preference) {
+    @supports (animation-timeline: view()) {
+        nav.contents ~ section {
+            color: color-mix(in srgb, var(--text-recede) calc(var(--recede) * (1 - var(--lit)) * 100%), var(--text));
+            transition: --lit 0.6s ease;
+            animation: recede linear both;
+            animation-timeline: view(block 0% 50%);
+        }
+
+        nav.contents ~ section:last-child {
+            animation-timeline: view();
+            animation-range: entry;
+        }
+
+        nav.contents ~ section:target,
+        nav.contents ~ section:focus-within {
+            --lit: 1;
+        }
+    }
+}
+
+@keyframes recede {
+    entry 0%,
+    exit 100% {
+        --recede: 1;
+    }
+
+    entry 100%,
+    exit 0% {
+        --recede: 0;
+    }
 }
 
 p,
@@ -626,8 +733,7 @@ code, pre > code {
 }
 
 h1 > code,
-h2 > code,
-h3 > code {
+h2 > code {
     font-size: 0.80em;
 }
 
@@ -719,6 +825,7 @@ label.margin-toggle:not(.sidenote-number) {
     }
 
     hr,
+    nav.contents > ul,
     section > p,
     section > footer,
     section > table,

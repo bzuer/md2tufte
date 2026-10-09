@@ -6,8 +6,6 @@ date: 2026-08-24
 noindex: false
 ---
 
-# Bruno Cruz
-
 <label for="fig-1" class="margin-toggle">&#8853;</label>
 <input type="checkbox" id="fig-1" class="margin-toggle"/>
 <span class="marginnote">

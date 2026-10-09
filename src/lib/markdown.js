@@ -7,6 +7,7 @@ import rehypeKatex from "rehype-katex";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import { remarkSidenotes } from "./remark-sidenotes.js";
+import { remarkSections } from "./remark-sections.js";
 import { rehypeContacts } from "./rehype-contacts.js";
 import { rehypeAccessibility } from "./rehype-accessibility.js";
 import { rehypeWidths } from "./rehype-widths.js";
@@ -50,7 +51,11 @@ function createBlockRenderer() {
   };
 }
 
-export async function renderMarkdown(markdown) {
+// The id BaseLayout gives <main>, the skip link's target: no section may take it.
+const LAYOUT_IDS = ["content"];
+
+// The title is the frontmatter's, when it has one (src/lib/remark-sections.js).
+export async function renderMarkdown(markdown, { title } = {}) {
   const renderInline = createInlineRenderer();
   const renderBlocks = createBlockRenderer();
   const processor = unified()
@@ -58,6 +63,7 @@ export async function renderMarkdown(markdown) {
     .use(remarkGfm)
     .use(remarkMath)
     .use(remarkSidenotes, { renderInline, renderBlocks })
+    .use(remarkSections, { title, reservedIds: LAYOUT_IDS })
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeKatex)

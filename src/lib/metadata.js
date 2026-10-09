@@ -11,6 +11,7 @@ const INLINE_PATTERNS = [
   [/\^\[(?:[^\][]|\[[^\]]*\])*\]/g, ""], // ^[inline sidenote]
   [/\[\^[^\]]+\]/g, ""], // [^footnote-reference]
   [/\{:\.[\w-]+\}/g, ""], // {:.marginnote}
+  [/\{#[\w-]+\}/g, ""], // {#anchor}
   [/!\[[^\]]*\]\([^)]*\)/g, ""], // images
   [/\[([^\]]+)\]\([^)]*\)/g, "$1"], // links keep their text
   [/`([^`]+)`/g, "$1"], // inline code
@@ -48,14 +49,19 @@ function truncate(value, limit) {
   return `${clipped.slice(0, boundary > 0 ? boundary : limit).replace(/[,;:.\s]+$/, "")}…`;
 }
 
+function withoutFences(body) {
+  return body.replace(/^```[\s\S]*?^```/gm, "");
+}
+
+// Without a frontmatter title, the first # heading is the page title — the rule
+// src/lib/remark-sections.js renders by.
 export function deriveTitle(body) {
-  const heading = body.match(/^#[ \t]+(.+?)[ \t]*$/m);
+  const heading = withoutFences(body).match(/^#[ \t]+(.+?)[ \t]*$/m);
   return heading ? stripInline(heading[1]) : "";
 }
 
 export function deriveDescription(body) {
-  const withoutFences = body.replace(/^```[\s\S]*?^```/gm, "");
-  for (const block of withoutFences.split(/\r?\n[ \t]*\r?\n/)) {
+  for (const block of withoutFences(body).split(/\r?\n[ \t]*\r?\n/)) {
     if (!isProse(block)) continue;
     const text = stripInline(block);
     if (text.length >= 40) return truncate(text, DESCRIPTION_LIMIT);
@@ -77,7 +83,9 @@ function resolveImage(data) {
 
 export function buildPageMetadata({ data = {}, body = "", pathname, modified = null }) {
   const isHome = pathname === "/";
-  const title = data.title || deriveTitle(body) || site.name;
+  // A frontmatter title may carry inline Markdown for the page's h1; a meta tag
+  // takes its words.
+  const title = (data.title && stripInline(String(data.title))) || deriveTitle(body) || site.name;
   const description = data.description || deriveDescription(body) || site.description;
   const keywords = data.keywords?.length ? data.keywords : site.keywords;
   const noindex = data.noindex === true;

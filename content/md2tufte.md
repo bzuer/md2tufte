@@ -1,9 +1,8 @@
 ---
-title: "The md2tufte Possibilities: a Practical Guide"
+title: "**The *md2tufte* Possibilities**: a Practical Guide"
 description: "A practical guide to the md2tufte Markdown syntax: sidenotes, margin notes, full-width figures, tables and math, rendered with Tufte CSS."
 keywords: [md2tufte, Tufte CSS, Edward Tufte, Markdown, sidenotes, margin notes, Astro, static site, information design, technical writing]
 ---
-# **The *md2tufte* Possibilities**: a Brief and Practical Guide
 
 This document is a comprehensive, self-contained demonstration of Markdown syntax and advanced styling techniques, showcasing how to create clear, effective, and visually sophisticated technical writing. Written entirely in Markdown with embedded HTML where necessary, it serves as both a reference and a live example: every feature the site supports appears below with the syntax that produces it and the result it renders.
 
@@ -24,7 +23,7 @@ Key Tufte concepts appear throughout this guide: high data-ink ratio, careful la
 Each category below includes not just syntax, but the reason the layout supports cognition.
 
 
-## Document Structure: Headings
+# Document Structure: Title, Sections and Anchors {#structure}
 
 **Tuftean Rationale: Macro/Micro Readings**
 
@@ -34,30 +33,41 @@ This hierarchical layering prevents "flatland" (the lack of depth in information
 
 In Tufte's terms, headings should function like a map legend: concise, stable, and informative. Keep the hierarchy shallow so the reader can scan without losing the narrative thread. Headings are not decoration; they are a high-level index to the evidence that follows.
 
+A page is one Markdown file, and each `#` in it opens a section: a page within the page, with an address of its own. The contents above are drawn from the sections, and as the reader moves through them, the section being read keeps its full ink while the others recede to a lighter grey. The title above them all comes from the frontmatter.
+
 **Markdown Syntax**
 
 ```md
-# Heading Level 1 (H1)
-## Heading Level 2 (H2)
-### Heading Level 3 (H3)
-#### Heading Level 4 (H4)
+---
+title: "The *md2tufte* Possibilities"
+---
+
+Text before the first section opens the page.
+
+# A Section
+## A Subsection
+### A Minor Heading
+
+# Another Section {#another}
 
 ```
 
 **Rendered Example**
 
-The page's title is its one H1 – it also becomes the page's `<title>` – so the example starts at H2.
+The large heading at the top of this page is its `title`, and every section of this guide is a `#`, set like the heading of this one. Inside a section:
 
-## Heading Level 2 (H2)
+## A Subsection (`##`)
 
-### Heading Level 3 (H3)
+### A Minor Heading (`###`)
 
-#### Heading Level 4 (H4)
+Each section is reached at `/page#anchor`. The anchor is the heading's words in lower case, joined by hyphens, without accents, so *Seção Dois* is `#secao-dois`; a `{#name}` at the end of the heading chooses it instead, as `{#structure}` does for this section. A link to a section is an ordinary link to its anchor: [the tables](#tables) on this page, or `/md2tufte#structure` from another. No two sections share an anchor; a second *Notes* on a page becomes `#notes-2`.
 
-Limit depth to H1–H4 to avoid excessive nesting, which introduces unnecessary visual complexity. Do not skip a level: screen-reader users move through a page by its headings, and a jump from H2 to H4 reads as a missing section.
+Text before the first `#` opens the page beneath the title, and a page needs two sections or more for the contents to appear. A page without a `title` in its frontmatter takes its first `#` heading as the title instead, and that heading opens no section.
+
+Keep to these three levels, and do not skip one: screen-reader users move through a page by its headings, and a jump from `#` to `###` reads as a missing subsection.
 
 
-## Text Formatting: Paragraphs, Breaks, and Emphasis
+# Text Formatting: Paragraphs, Breaks, and Emphasis
 
 **Tuftean Rationale: Minimalist Elegance and Signal-to-Noise Ratio**
 
@@ -90,7 +100,7 @@ Next line after two spaces.
 
 Use emphasis purposefully: bold for strong claims, italics for terms or nuance, strikethrough for a visible correction. Overuse diminishes impact and creates visual noise.
 
-**Line Breaks and Hyphenation**
+## Line Breaks and Hyphenation
 
 Text is set flush left and ragged right, as Tufte CSS sets it, and the build and the stylesheet keep the ragged edge even without the author doing anything. Words of six letters or more hyphenate at the line's end, with at least three letters on each side of the break and never more than two hyphens in a row; the browser weighs a paragraph's line breaks together, so no line is left much shorter than its neighbours. Headings, links and code are never hyphenated. A number stays on the line of its unit – `48 GB`, `17.5 %`, `250 ms` – because the build turns the space between them into a no-break space.
 
@@ -99,7 +109,7 @@ Text is set flush left and ragged right, as Tufte CSS sets it, and the build and
 The Ethnos corpus currently holds 7,698,445 works and 7,786,681 publications, distilled from 22,678,823 fetched source records – 297 GB of cached responses – in a 48 GB database: a characteristically interdisciplinary, institutionally heterogeneous literature, reconstructed source by source.
 
 
-## Lists: Unordered, Ordered, and Nested
+# Lists: Unordered, Ordered, and Nested
 
 **Tuftean Rationale: Parallelism and Comparison**
 
@@ -137,7 +147,7 @@ Use lists when the reader benefits from scanning and comparing items side by sid
 Keep nesting shallow to preserve clarity and maintain high informational density.
 
 
-## Links and Images
+# Links and Images
 
 **Tuftean Rationale: Integration of Visual Evidence**
 
@@ -149,7 +159,7 @@ Links serve as "micro-pathways" to deeper evidence without cluttering the primar
 
 Images should carry information, not mood. A link is an invitation to verify or extend the claim. When you can, connect the claim directly to its evidence in the same visual neighborhood.
 
-**Links**
+## Links
 
 **Markdown Syntax**
 
@@ -168,7 +178,7 @@ A bare address such as https://edwardtufte.github.io/tufte-css/ becomes a link b
 
 Make the link text say where it leads. "PPGAS" or "Tufte CSS" can be read out of context – in a screen reader's list of links, for instance; "click here" cannot.
 
-**Contact Links**
+## Contact Links
 
 Write an address the way you would say it. The build publishes it obfuscated: the link's address is percent-encoded, and an address shown in the text is broken by a hidden decoy, so a harvester reading the page collects a mailbox that cannot receive mail. The link still works, the address still copies, and a screen reader still reads the real one. There is nothing to remember and nothing to encode by hand.
 
@@ -184,7 +194,7 @@ Or simply someone@example.com in a sentence.
 
 [Mail](mailto:someone@example.com) – or simply someone@example.com in a sentence. Both are safe to write; view the page source to see what a scraper gets instead.
 
-**Images**
+## Images
 
 Images should provide substantive visual evidence, not decoration. The text in brackets is the image's alt text: what a screen reader says in its place, and what shows if it fails to load. Describe what the image shows, not that it is an image.
 
@@ -211,7 +221,7 @@ Images live in `content/img/` and are referenced as `/static/img/…`. In dark m
 
 ```
 
-**Captioned Images**
+## Captioned Images
 
 A title after the path becomes the image's caption, placed in the margin beside it. On a narrow screen the caption folds behind a ⊕ that opens it. An image alone in its paragraph becomes a figure; one inside a sentence stays in the line of text.
 
@@ -227,7 +237,7 @@ A title after the path becomes the image's caption, placed in the margin beside 
 ![Architectural survey drawing of a house plan](/static/img/imga.png "The survey drawing behind this site's *social card*.")
 
 
-## Blockquotes
+# Blockquotes
 
 **Tuftean Rationale: Layering and Separation**
 
@@ -256,7 +266,7 @@ Use blockquotes sparingly and keep them short. Tufte prefers that quotations sit
 
 Pair blockquotes with a nearby comment or margin note that explains why the quoted material matters.
 
-**Epigraphs**
+## Epigraphs
 
 An epigraph opens a chapter with a quotation set in italics and attributed underneath. Markdown inside an HTML block is not parsed, so the whole epigraph is written in HTML.
 
@@ -282,7 +292,7 @@ An epigraph opens a chapter with a quotation set in italics and attributed under
 </div>
 
 
-## Code: Inline and Blocks
+# Code: Inline and Blocks
 
 **Tuftean Rationale: Precision and Technical Literacy**
 
@@ -292,7 +302,7 @@ Differentiating between inline commands and functional blocks maintains technica
 
 Treat code as evidence. Keep it readable, name the language after the opening fence, and prefer small, relevant snippets over long dumps unless the full context is essential to the claim.
 
-**Inline Code**
+## Inline Code
 
 Use backticks for technical terms or short commands.
 
@@ -307,7 +317,7 @@ Run `npm run dev` to preview.
 
 Run `npm run dev` to preview.
 
-**Fenced Code Blocks**
+## Fenced Code Blocks
 
 Preserve formatting exactly, line breaks and indentation included.
 
@@ -333,7 +343,7 @@ console.log(message);
 A block whose longest line runs past about 76 characters is set full width by itself, taking in the margin, as the syntax example above shows. A line too long even for that scrolls inside its block rather than widening the page, and the block can be focused with Tab and scrolled with the arrow keys.
 
 
-## Mathematics
+# Mathematics
 
 **Tuftean Rationale: Exact Statement**
 
@@ -363,7 +373,7 @@ $$
 Keep the dollar sign for math: in prose, write amounts as "USD 5" or escape the sign as `\$`.
 
 
-## Tables
+# Tables
 
 **Tuftean Rationale: High Data Density**
 
@@ -398,11 +408,11 @@ Align columns logically and keep entries brief. If a table needs interpretation,
 
 Every table is set on a panel one shade off the page, so it reads as one object apart from the text, with its rows divided by hairlines of the page colour. While the pointer is on a table, its header returns to the page colour, and so does the row under the pointer, so the eye follows the row across and reads each value against the heading that names it. Nothing else changes tone.
 
-**Table Width**
+## Table Width {#table-width}
 
 A table's width follows from what it holds, counted in characters. If its widest row, unwrapped, fits the text column (about 72 characters of table type) or overruns it by no more than a fifth, the table stays in the column and a few cells wrap. A wider table is set full width, taking in the margin, so a long column of prose wraps into fewer, longer lines. Columns of numbers and short labels, up to 20 characters, are kept on one line, and the wrapping falls on the prose. The tables on this page are examples of both widths.
 
-**Tables Without Headers**
+## Tables Without Headers
 
 Markdown requires a header row. Leave its cells empty and the table renders without one: an empty header row is dropped, and a single empty header cell among others, such as a corner cell, is published as an ordinary cell, since a header that says nothing labels nothing.
 
@@ -426,7 +436,7 @@ Markdown requires a header row. Leave its cells empty and the table renders with
 On a narrow screen a table wider than the column scrolls sideways inside its own box, which Tab can reach, while the text around it keeps to the width of the screen.
 
 
-## Task Lists
+# Task Lists
 
 **Tuftean Rationale: Functional Elements**
 
@@ -452,7 +462,7 @@ Use them to make progress visible without adding narrative clutter. The check ma
 Each box is labelled by its item's text, so a screen reader announces "Completed task, checked". The boxes show state; the reader cannot tick them. Use task lists for process documentation, not for narrative sections.
 
 
-## Sidenotes and Footnotes
+# Sidenotes and Footnotes
 
 **Tuftean Rationale: Parallel Information Streams**
 
@@ -482,7 +492,7 @@ Text with a footnote.[^1]
 In this project, footnote syntax renders in the margin, so the reader never needs to jump to the bottom of the page. This keeps references close to the claim, which is a key Tufte principle. On a narrow screen the notes fold away; tap or tab to a note's number to open it.
 
 
-## Advanced Layout Patterns (Tufte-Inspired)
+# Advanced Layout Patterns (Tufte-Inspired)
 
 **Tuftean Rationale: Multi-Window Viewing and High Resolution**
 
@@ -491,7 +501,7 @@ These advanced patterns utilize the full available space of the digital canvas. 
 Use these patterns only when they improve comprehension. Tufte warns against empty decoration; each additional layout device should increase the clarity and density of information, not add noise.
 
 
-### Margin Notes
+## Margin Notes
 
 Place non-essential but helpful content (definitions, citations, asides) in the margin. Unlike a sidenote, a margin note carries no number.
 
@@ -513,7 +523,7 @@ A claim that needs a gloss. *The gloss sits in the margin, unnumbered.*{:.margin
 A source worth naming. [Tufte CSS, the stylesheet behind this site](https://edwardtufte.github.io/tufte-css/){:.marginnote}
 
 
-### Image Grids (Quilts)
+## Image Grids (Quilts)
 
 Display related images for comparison or progression.
 
@@ -543,7 +553,7 @@ This is the digital equivalent of Tufte's small multiples: many small views of t
 In a quilt, let the alt text say which view each image is and how it differs from the others; that difference is what the reader is meant to see.
 
 
-### Margin Figures with Toggle
+## Margin Figures with Toggle
 
 Responsive margin images with toggle on small screens.
 
@@ -569,7 +579,7 @@ This keeps the margin behavior in a narrow viewport while still honoring Tufte's
 The `for` of the label must match the `id` of the checkbox, and that `id` must be unique on the page: two toggles sharing one would both open the first note.
 
 
-### Full-Width Code Blocks
+## Full-Width Code Blocks
 
 Preserve long lines or horizontal alignment.
 
@@ -625,11 +635,11 @@ build_the_image(n_points=20, n_lines=10, file_name="img-N.png")
 
 </code></pre>
 
-### Full-Width Tables
+## Full-Width Tables
 
 Accommodate wide datasets or many columns.
 
-Full-width tables should remain light on rules and heavy on useful numbers. A Markdown table goes full width by itself when it needs to (see Table Width); `class="fullwidth"` sets it by hand on an HTML table. A `<caption>` goes first inside the table and is shown beneath it.
+Full-width tables should remain light on rules and heavy on useful numbers. A Markdown table goes full width by itself when it needs to (see [Table Width](#table-width)); `class="fullwidth"` sets it by hand on an HTML table. A `<caption>` goes first inside the table and is shown beneath it.
 
 **HTML Syntax**
 
@@ -729,7 +739,7 @@ Full-width tables should remain light on rules and heavy on useful numbers. A Ma
   </tbody>
 </table>
 
-### Full-Width Figures
+## Full-Width Figures
 
 Allow large visuals to breathe.
 
@@ -752,7 +762,7 @@ Use these sparingly so that wide elements remain a clear signal of importance.
   <figcaption>A full-width figure takes the whole width of the page, with its caption beneath.</figcaption>
 </figure>
 
-### Newthought (Small Caps Lead-In)
+## Newthought (Small Caps Lead-In)
 
 Subtle typographic emphasis for paragraph openings.
 
@@ -769,7 +779,7 @@ It is a gentle cue that a new idea has begun, without the weight of a new headin
 
 <span class="newthought">Opening phrase</span> continues the paragraph, and the small capitals mark the turn without breaking the text with a heading.
 
-### Typographic Details
+## Typographic Details
 
 A few classes cover the smaller cases: a subtitle under a title, a sans-serif face for labels, old-style numerals that sit in running text, and a warning colour that keeps its contrast in light and dark mode alike.
 
@@ -791,7 +801,7 @@ A few classes cover the smaller cases: a subtitle under a title, a sans-serif fa
 Colour alone must not carry the meaning: say in words that something is a warning, as the text above does.
 
 
-## Horizontal Rules
+# Horizontal Rules
 
 **Tuftean Rationale: Visual Separation**
 
@@ -821,7 +831,7 @@ A paragraph before the rule.
 A paragraph after it.
 
 
-## Escaping Characters
+# Escaping Characters
 
 **Tuftean Rationale: Technical Integrity**
 
@@ -841,7 +851,7 @@ When precision matters, show the literal characters so the reader can reproduce 
 \*escaped asterisks\* and \`backticks\`
 
 
-## Inline HTML (Use Judiciously)
+# Inline HTML (Use Judiciously)
 
 **Tuftean Rationale: Extending the Toolkit**
 
@@ -869,19 +879,19 @@ Use HTML only when it improves clarity or structure. If HTML becomes the default
 The site runs no scripts, and its security policy blocks content from other sites: an embedded video, map or web font will not load, while a linked image will.
 
 
-## Page Metadata (Frontmatter)
+# Page Metadata (Frontmatter)
 
 **Tuftean Rationale: Nothing Twice**
 
-A page describes itself. Its title comes from its first `#` heading and its description from its first paragraph of prose, so a new file needs nothing else to appear correctly in search results and in link previews.
+A page describes itself. Its description comes from its first paragraph of prose, and without a frontmatter title, its title comes from its first `#` heading, so a new file needs nothing else to appear correctly in search results and in link previews.
 
-Add a frontmatter block at the very top of a file only to override what is derived. This page uses one, and its effect shows in the page's source, not on the page.
+Add a frontmatter block at the very top of a file to give the page its title, or to override what is derived. The title is the heading at the top of the page and may carry inline Markdown, as this page's does; the browser tab, search results and link previews take its words alone. The other fields show in the page's source, not on the page.
 
 **Syntax**
 
 ```md
 ---
-title: "The md2tufte Possibilities: a Practical Guide"
+title: "**The *md2tufte* Possibilities**: a Practical Guide"
 description: A practical guide to the md2tufte Markdown syntax.
 keywords: [md2tufte, Tufte CSS, Markdown]
 image: /static/img/custom-card.png
@@ -895,7 +905,7 @@ noindex: false
 `image` and `imageAlt` replace the site's social card for this page; `noindex: true` keeps the page out of search engines and the sitemap.
 
 
-## Reading Modes and Accessibility
+# Reading Modes and Accessibility
 
 **Tuftean Rationale: Respect for the Reader**
 
@@ -904,14 +914,15 @@ The same evidence should reach every reader, whatever the screen, the colour sch
 - **Light and dark.** The page follows the reader's system setting. Every colour, including the highlight on a table row under the pointer, is chosen to keep text legible in both, at about the same contrast: dark text on white, and soft light text on a dark grey rather than white on black, which makes thin serif strokes glare.
 - **Measure.** A line of text holds about 68 characters, however wide the screen; the space the page does not need for text goes to the margin, to full-width tables and figures, and to the sides.
 - **Narrow screens.** Below 760 pixels, and when a reader zooms in far enough to reach that width, sidenotes and margin notes fold behind their number or ⊕, and wide tables and code scroll inside their own box.
-- **Keyboard.** Tab reaches every link, every note toggle on a narrow screen, and every box that scrolls; a "Skip to content" link comes first.
+- **Sections.** The section being read keeps the full ink, and the others recede to a lighter grey that still reads at 5:1. The hand-over follows the scroll: a section takes over as it fills the top half of the screen, at the same pace everywhere on the page. A jump from the contents glides to its section rather than cutting to it, unless the reader's system asks for reduced motion. Every section keeps the full ink when the system asks for more contrast, and in a browser without scroll-driven animations.
+- **Keyboard.** Tab reaches every link, every note toggle on a narrow screen, and every box that scrolls; a "Skip to content" link comes first. A section holding the focus keeps its full ink.
 - **Screen readers.** A note toggle is announced as "Sidenote" with its number, or as "Margin note". Math is read from MathML, and contact addresses read as written.
 - **Text size.** Type is sized relative to the reader's browser setting, so a larger default enlarges the whole page.
 
 The author's part is what no build can supply: alt text that says what an image shows, headings in order, link text that names its destination, and a unique `id` on each hand-written toggle.
 
 
-## Common Document Patterns
+# Common Document Patterns
 
 **Tuftean Rationale: Structural Appropriateness**
 
@@ -920,11 +931,11 @@ Matching the document pattern to the goal ensures that the layout supports the s
 Choose the smallest structure that gets the job done. A good structure reduces searching and makes evidence easy to find.
 
 - **Essay**: Title → Introduction → Sectioned body → Conclusion → References (use margins for citations).
-- **Reference Guide**: Title → Headings-based TOC → Short topical sections → Code/table examples.
+- **Reference Guide**: Title → Contents (drawn from the sections) → Short topical sections → Code/table examples.
 - **Tutorial**: Goal → Prerequisites → Numbered steps → Verification → Troubleshooting.
 
 
-## Writing Guidelines for Clarity
+# Writing Guidelines for Clarity
 
 **Tuftean Rationale: Principles of Analytical Design**
 
@@ -940,7 +951,7 @@ Aim for high data density with low visual noise. Every line should carry meaning
 - Ensure every element–text, code, image, or table–serves the reader's understanding.
 
 
-## Starter Template
+# Starter Template
 
 **Tuftean Rationale: Simplification of Workflow**
 
@@ -949,15 +960,21 @@ A standardized template ensures that the principles of hierarchy and layering ar
 Consistency is a form of respect for the reader: it creates predictable places for evidence, notes, and examples.
 
 ```md
-# Document Title
+---
+title: Document Title
+---
 
 Brief introductory paragraph stating purpose.
 
-## First Section
+# First Section
 
 Core explanation with supporting examples.^[A short aside, in the margin.]
 
-## Second Section
+## A Closer Look
+
+A detail of the first section.
+
+# Second Section
 
 - Key point one
 - Key point two[^source]
@@ -966,6 +983,6 @@ Core explanation with supporting examples.^[A short aside, in the margin.]
 
 ```
 
-This template incorporates headings, lists, and sidenotes while remaining extensible with Tufte-style classes for margins and full-width elements as needed. Saved as `content/<name>.md`, it is published at `/<name>`.
+This template incorporates a title, sections, lists, and sidenotes while remaining extensible with Tufte-style classes for margins and full-width elements as needed. Saved as `content/<name>.md`, it is published at `/<name>`, and its sections at `/<name>#first-section` and `/<name>#second-section`.
 
 [^1]: Defined anywhere in the file, and still shown in the margin.

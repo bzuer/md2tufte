@@ -6,7 +6,7 @@ import { buildPageMetadata } from "../lib/metadata.js";
 
 const page = await loadContentPage("index.md");
 const metadata = buildPageMetadata(page);
-const html = await renderMarkdown(page.body);
+const html = await renderMarkdown(page.body, { title: page.data.title });
 ---
 
 <BaseLayout metadata={metadata}>

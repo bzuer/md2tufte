@@ -13,7 +13,7 @@ export async function getStaticPaths() {
 
 const { page } = Astro.props;
 const metadata = buildPageMetadata(page);
-const html = await renderMarkdown(page.body);
+const html = await renderMarkdown(page.body, { title: page.data.title });
 ---
 
 <BaseLayout metadata={metadata}>
