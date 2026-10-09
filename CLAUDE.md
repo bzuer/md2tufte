@@ -10,7 +10,10 @@ margin-note syntax — with no extra authoring steps. The published example live
 `cruz.rio.br/md2tufte`.
 
 The core goal is **technological invisibility**: the author edits `content/index.md`
-(and other `content/*.md` files) and the system renders it. Preserve that workflow.
+(and other `content/*.md` files) and the system renders it. A file is a page, and
+each `#` heading in it is an **anchor section** of that page — a page within the
+page, at `/{page}#{anchor}` — so one Markdown file can hold what would otherwise be
+several pages. Preserve that workflow.
 One command runs a hot-reloading dev server; publishing is a build + sync step, not a
 manual multi-step deploy.
 
@@ -63,7 +66,9 @@ change that forces the author to edit anything in `src/`, `scripts/` or
   `[indexNowKey].txt.js` are **generated endpoints**, so nothing they emit can drift
   from `config.ini`.
 - `src/layouts/BaseLayout.astro` — shared HTML shell (KaTeX CSS, skip link, landmark
-  structure); delegates the whole `<head>` to `SiteHead`.
+  structure); delegates the whole `<head>` to `SiteHead`. Its `<article>` takes the
+  sections the pipeline emits; a page written in Astro (`404.astro`) wraps its own
+  content in a `<section>`.
 - `src/components/SiteHead.astro` — every `<head>` tag: title, description, keywords,
   canonical, icons, Open Graph, Twitter and the JSON-LD block.
 - `src/lib/` — configuration, rendering pipeline and metadata:
@@ -75,6 +80,8 @@ change that forces the author to edit anything in `src/`, `scripts/` or
   - `markdown.js` — `renderMarkdown()`, the unified processor entry point.
   - `remark-sidenotes.js` — custom remark plugin implementing the sidenote/margin-note
     transforms.
+  - `remark-sections.js` — the page's structure from its headings: the title, the
+    anchor sections, the contents (see “Markdown Pipeline”).
   - `rehype-contacts.js` — obfuscates email addresses and telephone links against
     harvesting.
   - `rehype-typography.js` — binds a number to its unit with a no-break space.
@@ -127,10 +134,32 @@ git-ignored `.env.deploy`.
 
 ## Markdown Pipeline (`src/lib/`)
 
-`renderMarkdown(markdown)` runs a `unified` chain: `remark-parse` → `remark-gfm` →
-`remark-math` → `remarkSidenotes` → `remark-rehype` (`allowDangerousHtml`) →
-`rehype-raw` → `rehype-katex` → `rehypeContacts` → `rehypeTypography` →
-`rehypeWidths` → `rehypeAccessibility` → `rehype-stringify`.
+`renderMarkdown(markdown, { title })` runs a `unified` chain: `remark-parse` →
+`remark-gfm` → `remark-math` → `remarkSidenotes` → `remarkSections` →
+`remark-rehype` (`allowDangerousHtml`) → `rehype-raw` → `rehype-katex` →
+`rehypeContacts` → `rehypeTypography` → `rehypeWidths` → `rehypeAccessibility` →
+`rehype-stringify`. The routes pass the frontmatter `title`.
+
+`remarkSections` turns the headings into the page's structure:
+
+- **Title.** The h1 is the frontmatter `title`, parsed as inline Markdown (so
+  `"**The *md2tufte* Possibilities**"` keeps its emphasis); without one, the file's
+  first `#` heading is the title and leaves the flow. Either way a page needs no
+  frontmatter. The meta tags take the title's words alone (`metadata.js`).
+- **Sections.** Every other `#` opens a `<section id>` that runs to the next `#`,
+  and every heading moves one rank down: `#` → h2, `##` → h3, `###` → h4 (h6 at
+  most). The id is a trailing `{#name}` when the author gives one, else the
+  heading's words — lower case, accents dropped (NFKD), runs of anything else made
+  one hyphen. Ids are unique on the page: author-chosen ones are claimed first, then
+  each derived one steps past every id already present — raw HTML's, the
+  sidenotes', and `content`, `<main>`'s, passed in from `markdown.js` — with `-2`,
+  `-3`. `{#name}` on a `##` or deeper stays on that heading as its own anchor.
+- **Lead.** The title and whatever comes before the first `#` share the first,
+  untitled `<section>` — the geometry the page had when the layout held one section.
+- **Contents.** With two sections or more, a `<nav class="contents"
+  aria-label="Contents">` lists them, in plain text, between the lead and the first
+  section. Its presence is also what switches on the receding (see “Typography and
+  Layout”), through `nav.contents ~ section`, so a page of one section never fades.
 
 `remarkSidenotes` is given two helper renderers (`renderInline`, `renderBlocks`) so it
 can turn note content into HTML before rehype runs. It handles:
@@ -204,6 +233,10 @@ pipeline output alike:
   `content: counter(...) / ""` so it is not announced twice. A label that already
   contains words is left alone.
 
+The anchor sections (`remark-sections.js`) carry no accessible name, on purpose: a
+named `<section>` is a region landmark, and a guide of twenty would bury the
+landmark list. The contents `<nav>` is the one landmark they add.
+
 In the stylesheet (`public/static/css/styles.dev.css`):
 
 - **Colours are tokens on `:root`**, redefined once under
@@ -230,6 +263,11 @@ In the stylesheet (`public/static/css/styles.dev.css`):
 - The root size is a percentage, not px, so the reader's own font setting scales
   the page; `overflow-wrap: break-word` on `body` lets URLs break instead of
   widening it.
+- A receded section's text is `--text-recede` (#6b6b6b / #8f8f8f): about 5.3:1 on
+  the page and 4.8:1 on a table's panel, in either mode. The receding is off under
+  `prefers-contrast: more`, and a section holding the keyboard focus is never
+  receded. `scroll-behavior: smooth` applies only under
+  `prefers-reduced-motion: no-preference`.
 
 The author's part is what no build can supply: alt text that describes the image,
 headings in order, link text that names its destination, and a unique `id` on each
@@ -248,11 +286,45 @@ of them.
 - **Size.** The root is `93.75%` (15px, Tufte's own) on wide screens and `87.5%`
   (14px) below 760px, where the column is narrow. Body text is `1.4rem` on a
   `2rem` line.
+- **Headings.** The title (h1) is `3.2rem`; a section's `#` (h2) is italic
+  `2.2rem`; a `##` (h3) is bold text type — `1.4rem` on the `2rem` line, the look
+  of a `**bold**` run-in the guide uses for its labels, set apart by the space
+  above it; `###` and below (h4–h6) are italic text type. The old h3 (italic
+  `1.7rem`) has no Markdown level any more: bold is the step below italic
+  display type, and the one weight TG Pagella has besides regular.
 - **Rhythm.** Paragraphs and lists are `1.4rem` apart (0.7 of a line). Space above
   a heading grows with its rank — `h2` 4.2rem, `h3` 2.8rem, `h4` 2.1rem — and the
   space below it is the paragraph gap, so a heading binds to its text. There is no
   `p + h2` style override; an earlier one cut the space above sections to less
-  than the heading's own margin.
+  than the heading's own margin. An anchor section (`article > section[id]`) has no
+  padding, so its h2's margin collapses through it and sections stand exactly as
+  far apart as that margin; the default `section` padding (1.4rem top and bottom)
+  stays on the lead, which keeps the title where it was. `scroll-margin-top: 2rem`
+  leaves room above a heading jumped to.
+- **Contents.** `nav.contents` lists the sections in the text column, body type,
+  no bullets and no underline until hover or focus: a column of nineteen
+  underlined lines weighed more than the lead above it.
+- **Sections recede.** The section being read is in `--text`; the others fade to
+  `--text-recede`, driven by a scroll timeline, so there is no script and the fade
+  follows the scroll exactly. A section is “read” while it covers the top half of
+  the viewport — `view(block 0% 50%)`, keyframes on `entry` and `exit` — so a
+  hand-over between neighbours runs over the same half screen of scrolling wherever
+  it happens, and a jump that lands a heading at the top lands a lit section. The
+  details are all forced by something:
+  - colour, not opacity: opacity also fades images, and any dim that stays visible
+    drops `.danger` below 4.5:1 (0.7 left it at 4.06);
+  - the last section uses `view()` with `animation-range: entry`: a short one can
+    never reach the top half, and must still be lit at the end of the page;
+  - `:target` and `:focus-within` light a section wherever it is — a short section
+    jumped to sits mostly above the band. They set a second registered number,
+    `--lit`, eased by a `transition`, and the colour is a `color-mix()` of both:
+    switching the animation off instead made the colour jump, because a transition
+    never starts from an animated value;
+  - everything hangs on `nav.contents ~ section`, a sibling combinator: no `:has`
+    (see the hover rule below), and no fading on a page without contents;
+  - the block sits inside `@supports (animation-timeline: view())`, so a browser
+    without scroll-driven animations (Firefox, at the time of writing) shows every
+    section in full ink.
 - **Two widths.** `rehype-widths.js` sets a table or code block full width when it
   will not fit the column: a table whose unwrapped row (with three characters of
   padding a column) exceeds 72 characters of table type by more than a fifth, a
@@ -296,12 +368,17 @@ of them.
 ## Metadata and SEO
 
 Content files need **no** frontmatter: `src/lib/metadata.js` derives the title from the
-first `#` heading and the description from the first prose paragraph (skipping HTML
+first `#` heading outside a code fence — the heading `remark-sections.js` makes the
+title when the frontmatter names none — and the description from the first prose
+paragraph (skipping HTML
 blocks, headings, code and the sidenote syntax), truncated to 160 characters on a word
 boundary. Optional frontmatter overrides any of it — `title`, `description`,
 `keywords`, `image`, `imageAlt`, `date`, `noindex` — parsed by `src/lib/frontmatter.js`,
 a small YAML subset (scalars, quoted scalars, booleans, inline and block lists). A file
 without a frontmatter block, or with an unterminated one, is treated as pure Markdown.
+A frontmatter `title` may carry inline Markdown for the h1; `<title>`, Open Graph,
+Twitter and JSON-LD take its words through the same `stripInline()` a derived title
+goes through, which also drops a `{#anchor}`.
 
 An email address is stripped from a *derived* title or description along with the
 other syntax that must not leak into a meta tag. A meta tag cannot be obfuscated —
@@ -625,8 +702,12 @@ Run `npm run build` before publishing to validate the static output.
   text contrast of every table cell while hovered (axe does not hover); a Tab walk
   that checks each stop has a visible ring and that each margin toggle opens its
   note with Space; `scrollWidth` at 320px; and the checkbox names in the
-  accessibility tree. Screenshot the guide in both schemes, and diff the other
-  pages against the previous build to catch unintended layout changes.
+  accessibility tree. Run axe and the contrast pass at more than one scroll
+  position (the top, and halfway down), since which sections are receded depends
+  on it. Screenshot the guide in both schemes, and diff the other pages against
+  the previous build to catch unintended layout changes. WebKit cannot run on
+  this machine, so the receding — scroll-driven animations, registered custom
+  properties — is checked in Safari by hand after a change to it.
 - Otherwise validate with `npm run dev` (local review) and `npm run build`
   (production-like check). If you add unit tests later, document the command here and
   keep test files near their modules.

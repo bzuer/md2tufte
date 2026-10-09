@@ -118,17 +118,19 @@ lockfile when they are missing, so a new checkout needs no separate step.
 
 ## Metadata
 
-Pages describe themselves. Titles come from the first `#` heading, descriptions
-from the first prose paragraph, so a new Markdown file gets a complete `<head>` —
+Pages describe themselves. The title is the frontmatter's `title`, or without one
+the first `#` heading; descriptions come from the first prose paragraph, so a new
+Markdown file gets a complete `<head>` —
 canonical URL, Open Graph, Twitter card, JSON-LD — with no extra authoring.
 `robots.txt`, `sitemap.xml`, `site.webmanifest`, `/favicon.ico` and the IndexNow
 key file are generated from the same values at build time.
 
-Add frontmatter only to override:
+Add frontmatter to give the page its title — inline Markdown is kept in the
+heading and dropped from the meta tags — or to override what is derived:
 
 ```yaml
 ---
-title: "The md2tufte Possibilities: a Practical Guide"
+title: "**The *md2tufte* Possibilities**: a Practical Guide"
 description: A practical guide to the md2tufte Markdown syntax.
 keywords: [md2tufte, Tufte CSS, Markdown]
 image: /static/img/custom-card.png
@@ -146,6 +148,11 @@ the site can afford because it ships no client-side JavaScript.
 
 ## Markdown Support
 
+- Sections: each `#` opens an anchor section, a page within the page at
+  `/page#anchor` (from the heading's words, or `# Heading {#anchor}`); two or more
+  are listed in a generated contents. `##` is a subsection in bold, `###` a minor
+  heading in italics. The section being read keeps the full ink and the others
+  recede to a lighter grey as the reader scrolls — in CSS, with no script.
 - Sidenotes: `Main text^[This becomes a sidenote]`
 - Footnotes: `Main text[^note]` + `[^note]: note text` (rendered as sidenotes)
 - Captioned images: `![Alt](path "Caption")` — the caption goes in the margin
