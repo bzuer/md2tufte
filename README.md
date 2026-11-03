@@ -72,7 +72,7 @@ message and the deploy still succeeds.
 
 ```bash
 ./scripts/manage.sh deploy    # build, Nginx, verify, publish, status, verify again
-./scripts/manage.sh status    # report on the build, Nginx, the port and both origins
+./scripts/manage.sh status    # report on the build, Nginx, the port, the gateway and both origins
 ./scripts/manage.sh verify    # check a running origin over HTTP
 ./scripts/manage.sh publish   # purge the Cloudflare cache, submit to IndexNow
 ./scripts/manage.sh nginx     # install the generated config and reload
@@ -87,14 +87,17 @@ checks the public site — in that order, so nothing is published on top of an
 origin that is answering wrongly. Add `--no-publish` or `--no-verify` to skip a
 stage. It asks for `sudo` only when something under `/etc` has to change.
 
-`status` changes nothing. Among its checks, it compares the public site with the
-local origin, so a tunnel pointed at the wrong port — or at another machine —
-shows up as a failure rather than as a site that quietly stopped updating.
+`status` changes nothing. Among its checks, it asks the public site several
+times and compares each answer with the local origin. A tunnel pointed at the
+wrong port, or a connector on another machine serving its own build, therefore
+shows up as a failure, not as a site that quietly stopped updating.
 
 Nginx serves `dist/` on `127.0.0.1:<port>`, and nothing else of the site is
-reachable; point a Cloudflared tunnel at that address (`127.0.0.1`, not
-`localhost`). The scripts follow the same rules as the other services on the
-server — see `CLAUDE.md`.
+reachable. Point a Cloudflared tunnel at that address, or at a gateway in front of
+it: an Nginx server block that forwards the site's host to the port. `status`
+finds a gateway in the installed configs and checks its hop. Either way, use
+`127.0.0.1`, not `localhost`. The scripts follow the same rules as the other
+services on the server — see `CLAUDE.md`.
 
 ### Several sites on one server
 

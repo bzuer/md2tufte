@@ -22,21 +22,39 @@ change that forces the author to edit anything in `src/`, `scripts/` or
 `astro.config.mjs` to publish is a regression. Every other value is derived — from
 `config.ini`, from the Markdown itself, or from files already on disk.
 
-> Heads-up on the port: `[server] port` must match the address the Cloudflared tunnel
-> dials, for both public hostnames — `cruz.rio.br` and `www.cruz.rio.br`, whose
-> requests Nginx redirects to the apex; removing a hostname from the tunnel also
-> deletes its DNS record. The tunnel runs from a token (`/etc/cloudflared/token`), so its target lives
-> in the Cloudflare Zero Trust dashboard and nothing on this machine sets it;
-> `journalctl -u cloudflared` is the only local view of where it connects. On
-> 2026-09-27 the port moved from 1213 to 12121 (config `md2bruno.conf`) and the old
-> `md2html.conf` was removed while the tunnel still dialled 1213, and the public site
-> answered 502. Change the port and the tunnel together, then run
-> `./scripts/manage.sh status`: it compares the public site's `Last-Modified` with
-> the origin's, so a tunnel that dials the wrong port — or another machine — fails
-> a check instead of passing unnoticed. The tunnel must dial `127.0.0.1:<port>`, not
-> `localhost`: the site listens on IPv4 loopback only (see “Conventions shared with
-> `~/app` and `~/api`”). `manage.sh`
-> never deletes a config it did not name.
+> Heads-up on the port and the tunnel: the Cloudflared tunnel does not dial
+> `[server] port`. Since 2026-10-15 the routes of both public hostnames —
+> `cruz.rio.br` and `www.cruz.rio.br`, whose requests Nginx redirects to the apex —
+> dial a gateway, `http://127.0.0.1:1200`: Nginx server blocks installed by
+> `~/bot-help`, which log and classify every request (observe mode: none is refused
+> yet) and forward it by `Host` to `127.0.0.1:<port>`. All traffic is policed at
+> 1200 and served from the port, so the port is written in one place outside this
+> checkout, `~/bot-help/config.ini` (`[ports] cruz`). Change the two together, then
+> run `python3 -m bothelp render` and `scripts/manage.sh nginx` in `~/bot-help` on
+> every connector host, or the gateway answers 502. The tunnel's routes stay on
+> 1200. They live in the Cloudflare Zero Trust dashboard, because the tunnel runs
+> from a token (`/etc/cloudflared/token`) and nothing on a host sets them;
+> `journalctl -u cloudflared` (`originService=`) is the only local view.
+> Removing a hostname from the tunnel also deletes its DNS record. On 2026-09-27
+> the port moved from 1213 to 12121 while the tunnel still dialled 1213, and the
+> public site answered 502. On 2026-10-20 it moved to 1209, this time together with
+> the gateway's upstream.
+>
+> The tunnel has a connector on two hosts, `server` (192.168.18.175, production,
+> `/home/server/md2tufte`) and `ubuntu` (192.168.18.80, development,
+> `/home/ubuntu/md2tufte`), and each runs the gateway. Cloudflare hands each request
+> to one of them, so a reader gets whichever host's `dist/` answers. After any change
+> to this chain, run `./scripts/manage.sh status`. It checks the gateway's hop to
+> this origin, then asks the public site eight times and compares each
+> `Last-Modified` with the origin's. A route that dials the wrong port, or a public
+> site answered by another host's build, therefore fails a check instead of passing
+> unnoticed. Two hosts' builds never share a `Last-Modified`. While both run a
+> connector, the check on either host fails whenever one of its eight requests
+> reaches the other. On 2026-11-03 `server`'s deploy failed on an answer from
+> `ubuntu`'s older build; from `ubuntu`, 31 of 32 public requests got `ubuntu`'s
+> own build. The gateway and the tunnel dial `127.0.0.1`, not `localhost`, because
+> the site listens on IPv4 loopback only (see “Conventions shared with `~/app` and
+> `~/api`”). `manage.sh` never deletes a config it did not name.
 
 ## Project Structure
 
@@ -127,6 +145,8 @@ Anything that can be derived is **not** in the file, and must not be added to it
 - The social card's dimensions are read from the PNG; only its alt text and the source
   artwork are configured.
 - Nginx's `root` and the sitemap path come from `paths.js`.
+- The gateway's address (`127.0.0.1:1200`) is read off the installed Nginx configs
+  by `manage.sh status`.
 
 Cloudflare credentials stay out of `config.ini` because they are secret:
 `CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_API_TOKEN`, in the environment or in a
@@ -450,7 +470,8 @@ npm run assets     # regenerate the social card
   that one. It accepts the configured host so the built site can also be previewed
   through the tunnel.
 
-Deploy is local only (Nginx serves `dist/` directly; expose it via Cloudflared).
+Deploy is local only: Nginx serves `dist/` directly, and the Cloudflared tunnel
+reaches it through the gateway on 1200 (see the heads-up at the top).
 `scripts/manage.sh` is the single entry point, and takes no settings of its own — it
 reads `config.ini` through `node scripts/config.js`:
 
@@ -458,7 +479,7 @@ reads `config.ini` through `node scripts/config.js`:
 ./scripts/manage.sh dev
 ./scripts/manage.sh build
 ./scripts/manage.sh deploy           # the full pipeline, below
-./scripts/manage.sh status           # build, Nginx, port, origin, public site; writes nothing
+./scripts/manage.sh status           # build, Nginx, port, origin, gateway, public site; writes nothing
 ./scripts/manage.sh verify           # check the public origin over HTTP
 ./scripts/manage.sh verify --origin http://127.0.0.1:<port>
 ./scripts/manage.sh publish          # purge the edge, notify IndexNow
@@ -500,10 +521,18 @@ so the comparison catches it).
 - `manage.sh status` checks what `verify.js` cannot see from outside: the build
   exists, Nginx is active, the installed config equals the rendered one, the
   directory it logs into exists, the port is bound to exactly the configured
-  loopback address and answered by Nginx, the origin answers 200, the public site
-  answers 200 **and serves this build** (its `Last-Modified` equals the origin's),
-  and `.env.deploy` is readable by its owner only. Each failure names the command
-  that fixes it.
+  loopback address and answered by Nginx, the origin answers 200, the gateway
+  forwards the site's host to this origin (its `Last-Modified` equals the origin's),
+  the public site answers 200 **and serves this build** to each of eight requests,
+  and `.env.deploy` is readable by its owner only. `status` finds the gateway rather
+  than reading it from the configuration. It is a server block in another config
+  that names the site's host on a loopback port of its own: anything in `conf.d/`
+  and `sites-enabled/`, and every file those include. If there is none, the
+  gateway check is skipped and the tunnel is expected to dial the port itself.
+  The public site is asked eight times because a tunnel with connectors on several
+  hosts hands each request to one of them. A split is reported as the number of
+  answers that carried this build, beside the other host's `Last-Modified`. Each
+  failure names the command that fixes it, or where the fault lies.
 
 ### Conventions shared with `~/app` and `~/api`
 
@@ -559,12 +588,12 @@ What the other two have and this site deliberately does not:
   database; these change only on deploy, which submits them.
 - **No `[::1]` listener.** The app adds one for a connector that resolves
   `localhost` to it, but a listen on an address the host does not have fails
-  `nginx -t` — and any restart — for *every* site. On this machine NordVPN turns
+  `nginx -t` — and any restart — for *every* site. On `ubuntu` NordVPN turns
   IPv6 off on all interfaces while it is connected (its Linux client has no setting
   to keep it). On 2026-09-28 that left `ethnos-app.conf`'s `listen [::1]:1212`
   failing, and with it every deploy here, until the VPN was disconnected; the
   sockets Nginx bound before kept serving, so nothing looked wrong until a test. The
-  site listens on `127.0.0.1` alone, and the tunnel dials that.
+  site listens on `127.0.0.1` alone, and the gateway dials that.
 - **No env file in `/etc`.** Settings stay in `config.ini`, in the checkout.
 
 Nginx reads `dist/` as its own user (the `user` in `/etc/nginx/nginx.conf`), through a
@@ -574,7 +603,8 @@ default ACL on `dist/`, so whatever a later `npm run build` writes is readable w
 another grant (Astro empties `dist/` but keeps the directory). ACLs only: a
 `chmod o+rx` fallback would open the home directory to every account.
 
-For Cloudflared, point the tunnel at `http://127.0.0.1:<port>`.
+For Cloudflared, the tunnel's routes point at the gateway, `http://127.0.0.1:1200`,
+never at `<port>` itself. The gateway forwards to `127.0.0.1:<port>`.
 
 ### Several sites from this template on one server
 
@@ -584,8 +614,14 @@ its own checkout on its own port. Nothing may be shared but Nginx itself:
 - `[server] port` is what separates them. `default_server` is scoped to an
   `address:port` pair, so one per port is correct; two on the *same* port stop Nginx
   from loading at all and take down every site on the box. `manage.sh nginx` therefore
-  scans `conf.d/` and `sites-enabled/` and refuses to install onto a port another
-  config already listens on.
+  scans `conf.d/`, `sites-enabled/` and every file they include, and refuses to
+  install onto a port another config already listens on. The include walk matters
+  because the gateway's server blocks are in `/etc/nginx/bot-help/`, pulled in by
+  one `include`: a scan of `conf.d/` alone would not see 1200.
+- Each site also needs an upstream and a server block in the gateway: `[ports]` in
+  `~/bot-help/config.ini`, plus a block in its `nginx/sites/gateway.conf`. Deploy
+  them on every connector host before the site's tunnel route moves to 1200. The
+  gateway answers 421 to a host it has no block for.
 - `nginx_conf` defaults to the project's directory name, so a second checkout never
   overwrites the first one's config, and the cache `map` variable is named after that
   file, so two configs never declare the same variable.
@@ -691,7 +727,7 @@ Run `npm run build` before publishing to validate the static output.
   its functions with `PORT` and `NGINX_CONF` pointed there and a stand-in `sudo` on
   `PATH` that maps `nginx`/`systemctl` onto `-p <prefix>`.
 - `./scripts/manage.sh status` is the read-only check of the running topology; run
-  it after any change to Nginx, the port or the tunnel.
+  it after any change to Nginx, the port, the gateway or the tunnel.
 - **Accessibility is audited in a real browser**, since contrast under hover,
   focus rings and reflow exist only once the page is laid out. After touching the
   stylesheet or the pipeline: build, serve `dist/` through a throwaway Nginx as
