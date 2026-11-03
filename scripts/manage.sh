@@ -128,6 +128,54 @@ nginx_conf_is_current() {
   [ -r "$NGINX_CONF" ] && [ "$(render_nginx_conf)" = "$(cat "$NGINX_CONF")" ]
 }
 
+# Every file Nginx loads from conf.d/ and sites-enabled/, and every file those
+# include. A config can keep its server blocks in a tree of its own, pulled in
+# by one include line, and a scan of conf.d/ alone would miss their listens.
+# Nginx configs are world-readable, so reading them needs no root.
+nginx_files() {
+  local -a queue=(/etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/*)
+  local -A seen=()
+  local i=0 file include
+  while [ "$i" -lt "${#queue[@]}" ]; do
+    file="${queue[$i]}"
+    i=$((i + 1))
+    [ -f "$file" ] && [ -z "${seen[$file]:-}" ] || continue
+    seen[$file]=1
+    printf '%s\n' "$file"
+    for include in $(awk '$1 == "include" { sub(/;$/, "", $2); print $2 }' "$file"); do
+      [[ "$include" == /* ]] || include="/etc/nginx/${include}"
+      # Unquoted, so an include's glob expands to the files it names.
+      queue+=($include)
+    done
+  done
+}
+
+# The gateway in front of this site, if there is one: a server block in another
+# config that answers for the site's host on a loopback port of its own. The
+# tunnel dials it and it forwards to this site's port, so its address is read
+# off the configs rather than written down a second time.
+gateway_address() {
+  nginx_files | grep -vFx "$NGINX_CONF" | xargs -r -d '\n' awk -v host="$SITE_HOST" -v port="$PORT" '
+    FNR == 1 { depth = 0; block = -1 }
+    {
+      sub(/#.*/, "")
+      if (block < 0 && /^[[:space:]]*server[[:space:]]*\{/) { block = depth; listens = ""; named = 0 }
+      if (block >= 0 && $1 == "listen") { address = $2; sub(/;$/, "", address); listens = listens " " address }
+      if (block >= 0 && $1 == "server_name") {
+        for (i = 2; i <= NF; i++) { name = $i; sub(/;$/, "", name); if (name == host) named = 1 }
+      }
+      depth += gsub(/\{/, "{") - gsub(/\}/, "}")
+      if (block >= 0 && depth <= block) {
+        n = split(listens, bound, " ")
+        for (i = 1; i <= n; i++) {
+          if (bound[i] ~ /^[0-9]+$/) bound[i] = "127.0.0.1:" bound[i]
+          if (named && bound[i] ~ /^127\./ && bound[i] !~ (":" port "$")) print bound[i]
+        }
+        block = -1
+      }
+    }' | LC_ALL=C sort -u | awk 'NR == 1'
+}
+
 port_addresses() {
   ss -lntH "sport = :$PORT" 2>/dev/null | awk '{print $4}' | LC_ALL=C sort -u | tr '\n' ' ' | sed 's/ $//'
 }
@@ -183,7 +231,7 @@ explain_nginx_failure() {
   local address files why
   address="$(sed -n 's/.*bind() to \([^ ]*\) failed (99:.*/\1/p' <<<"$1" | head -1)"
   [ -n "$address" ] || return 0
-  files="$(grep -lF "listen ${address}" /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* 2>/dev/null | tr '\n' ' ' | sed 's/ $//')"
+  files="$(nginx_files | xargs -r -d '\n' grep -lF "listen ${address}" 2>/dev/null | tr '\n' ' ' | sed 's/ $//' || true)"
   why="${address} is not an address this host has"
   if [[ "$address" == \[* ]] && [ "$(cat /proc/sys/net/ipv6/conf/lo/disable_ipv6 2>/dev/null)" = 1 ]; then
     why="${why}: IPv6 is turned off (net.ipv6.conf.lo.disable_ipv6 = 1)"
@@ -201,12 +249,10 @@ install_nginx_conf() {
   as_root true
 
   # Two default_server blocks on one address stop Nginx from loading at all,
-  # which would take down every site on this server, not just this one. Nginx
-  # configs are world-readable, so finding them needs no root.
+  # which would take down every site on this server, not just this one.
   local taken
-  taken="$(grep -lE "^[[:space:]]*listen[[:space:]]+([^;]*:)?${PORT}\b" \
-    /etc/nginx/conf.d/*.conf /etc/nginx/sites-enabled/* 2>/dev/null |
-    grep -vFx "$NGINX_CONF" || true)"
+  taken="$(nginx_files | grep -vFx "$NGINX_CONF" |
+    xargs -r -d '\n' grep -lE "^[[:space:]]*listen[[:space:]]+([^;]*:)?${PORT}\b" 2>/dev/null || true)"
   if [ -n "$taken" ]; then
     err "Port ${PORT} is already used by:"
     printf '  %s\n' $taken >&2
@@ -314,7 +360,7 @@ ensure_nginx() {
 # ─── Status ──────────────────────────────────────────────────────────────────
 
 http_head() {
-  curl -sI --max-time 20 -A md2tufte-status "$1" 2>/dev/null | tr -d '\r' || true
+  curl -sI --max-time 20 -A md2tufte-status "$@" 2>/dev/null | tr -d '\r' || true
 }
 
 status_code() {
@@ -325,13 +371,20 @@ header() {
   awk -v name="$1:" 'tolower($1) == name { sub(/^[^:]*:[ \t]*/, ""); print; exit }'
 }
 
-# The tunnel's target is set in the Cloudflare Zero Trust dashboard, not on this
-# machine, so a wrong one shows up only here, as a public site that is not this
-# origin's.
+# Distinct lines, in order, on one line.
+summarize() {
+  awk 'NF && !seen[$0]++ { printf "%s%s", (n++ ? " / " : ""), $0 }'
+}
+
+# The tunnel's routes are set in the Cloudflare Zero Trust dashboard, not on any
+# host, so a wrong one shows up only here, as a public site that is not this
+# origin's. $1 is what the routes must dial: the gateway, or else this port.
 tunnel_hint() {
-  local hint="the tunnel must dial 127.0.0.1:${PORT} (set in the Cloudflare Zero Trust dashboard)"
-  systemctl is-active --quiet cloudflared 2>/dev/null || hint="cloudflared is not running on this machine; ${hint}"
-  printf '%s' "$hint"
+  if systemctl is-active --quiet cloudflared 2>/dev/null; then
+    printf "another host's connector of the tunnel answered, or the tunnel's routes do not dial %s (Cloudflare Zero Trust dashboard)" "$1"
+  else
+    printf "cloudflared is not running on this host, so another host's connector answered"
+  fi
 }
 
 validate_all() {
@@ -396,19 +449,53 @@ validate_all() {
     *)          flunk "port ${PORT} is answered by '${server:-unknown}', not nginx" ;;
   esac
 
+  # The tunnel dials the gateway, when there is one, and the gateway forwards to
+  # this port: a stale upstream there answers with another build or a 502.
+  local gateway target
+  gateway="$(gateway_address || true)"
+  target="${gateway:-127.0.0.1:${PORT}}"
+  if [ -n "$gateway" ]; then
+    head="$(http_head -H "Host: ${SITE_HOST}" "http://${gateway}/")"
+    code="$(status_code <<<"$head")"
+    there="$(header last-modified <<<"$head")"
+    if [ "$code" = 200 ] && [ -n "$here" ] && [ "$there" = "$here" ]; then
+      pass "gateway forwards ${SITE_HOST} to this origin (${gateway} → 127.0.0.1:${PORT})"
+    elif [ -z "$code" ]; then
+      flunk "gateway ${gateway} does not answer"
+    else
+      flunk "gateway ${gateway} answers ${SITE_HOST} with ${code}${there:+ (Last-Modified ${there})}, not this build — it must forward to 127.0.0.1:${PORT}"
+    fi
+  fi
+
   # Nginx sends the file's mtime as Last-Modified and Cloudflare passes it on, so
-  # an equal value is this build and a different one is another machine's.
-  head="$(http_head "${SITE_URL}/")"
-  code="$(status_code <<<"$head")"
-  there="$(header last-modified <<<"$head")"
-  if [ "$code" != 200 ]; then
-    flunk "public site answers ${code:-nothing} (${SITE_URL}/) — $(tunnel_hint)"
-  elif [ -z "$here" ] || [ -z "$there" ]; then
-    warn "no Last-Modified to compare, so which origin serves ${SITE_URL} is unknown"
-  elif [ "$here" != "$there" ]; then
-    flunk "public site is not this build (Last-Modified ${there}; here ${here}) — $(tunnel_hint)"
+  # an equal value is this build and a different one is another host's. A tunnel
+  # with connectors on several hosts hands each request to one of them, so one
+  # answer says nothing about the next: the site is asked several times.
+  local asked=8 mine=0 i errors="" others="" detail=""
+  for ((i = 0; i < asked; i++)); do
+    head="$(http_head "${SITE_URL}/")"
+    code="$(status_code <<<"$head")"
+    there="$(header last-modified <<<"$head")"
+    if [ "$code" != 200 ]; then
+      errors+="${code:-nothing}"$'\n'
+    elif [ -n "$here" ] && [ "$there" = "$here" ]; then
+      mine=$((mine + 1))
+    else
+      others+="${there:-no Last-Modified}"$'\n'
+    fi
+  done
+  [ -z "$others" ] || detail="$(grep -c . <<<"$others") got Last-Modified $(summarize <<<"$others")"
+  [ -z "$errors" ] || detail="${detail:+${detail}, }$(grep -c . <<<"$errors") answered $(summarize <<<"$errors")"
+  if [ -z "$here" ]; then
+    warn "the origin sent no Last-Modified, so which host serves ${SITE_URL} is unknown"
+  elif [ "$mine" -eq "$asked" ]; then
+    pass "public site serves this build (${asked} of ${asked} requests to ${SITE_URL}/)"
+  elif [ "$mine" -gt 0 ]; then
+    flunk "public site serves this build to ${mine} of ${asked} requests; ${detail} — the tunnel also has a connector on another host, which serves its own build"
+  elif [ -z "$others" ]; then
+    flunk "public site answers $(summarize <<<"$errors") (${SITE_URL}/) — $(tunnel_hint "$target")"
   else
-    pass "public site serves this build (${SITE_URL}/)"
+    flunk "public site is not this build (${detail}; here ${here}) — $(tunnel_hint "$target")"
   fi
 
   if [ -f .env.deploy ]; then
@@ -497,7 +584,7 @@ Usage: $(basename "$0") [command] [options]
 
 Lifecycle:
   deploy            deps → build → nginx → verify origin → publish → status → verify public site (default)
-  status            Check the build, Nginx, the port, the origin and the public site; writes nothing
+  status            Check the build, Nginx, the port, the origin, the gateway and the public site; writes nothing
   verify            Check an origin's routing, metadata and headers over HTTP
   publish           Purge the Cloudflare cache and submit the URLs to IndexNow
   uninstall         Remove this site's Nginx config, dist/, .astro/ and node_modules/
